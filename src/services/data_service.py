@@ -244,20 +244,12 @@ class DataService:
         """Получает имя асаны по ID"""
         data = self.load_data()
         if not self._asana_mapping:
-            # Строим маппинг асан
-            all_asanas = []
-            for category in data.categories.values():
-                all_asanas.extend(category.asanas)
-            
-            if not all_asanas:
-                return None
-            
-            # Строим маппинг асан с тем же порядком, что и в _load_asanas_for_category
-            asana_index = 0
-            for category in data.categories.values():
+            # Строим маппинг асан по категориям
+            global_asana_index = 0
+            for category_name, category in data.categories.items():
                 for asana in category.asanas:
-                    self._asana_mapping[f'asana_{asana_index}'] = asana
-                    asana_index += 1
+                    self._asana_mapping[f'asana_{global_asana_index}'] = asana
+                    global_asana_index += 1
         
         return self._asana_mapping.get(asana_id)
     
