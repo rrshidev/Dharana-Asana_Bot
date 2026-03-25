@@ -84,7 +84,17 @@ class DataService:
             return []
         
         basics_files = [item for item in listdir(self.basics_dir) if isfile(join(self.basics_dir, item))]
-        basics = [basic[:-4] for basic in basics_files if basic.endswith('.txt')]
+        basics = []
+        for basic in basics_files:
+            if basic.endswith('.txt'):
+                # Убираем номер в начале и расширение
+                name = basic[:-4]  # убираем .txt
+                # Если начинается с цифр и точки, убираем их
+                if name and name[0].isdigit():
+                    parts = name.split('.', 1)
+                    if len(parts) > 1:
+                        name = parts[1].strip()
+                basics.append(name)
         return sorted(list(set(basics)))
     
     def _load_steps(self) -> List[str]:
@@ -93,8 +103,18 @@ class DataService:
             return []
         
         steps_files = [item for item in listdir(self.steps_dir) if isfile(join(self.steps_dir, item))]
-        steps = [step[:-4] for step in steps_files if step.endswith('.txt')]
-        return sorted(steps)
+        steps = []
+        for step in steps_files:
+            if step.endswith('.txt'):
+                # Убираем номер в начале и расширение
+                name = step[:-4]  # убираем .txt
+                # Если начинается с цифр и точки, убираем их
+                if name and name[0].isdigit():
+                    parts = name.split('.', 1)
+                    if len(parts) > 1:
+                        name = parts[1].strip()
+                steps.append(name)
+        return sorted(list(set(steps)))
     
     def get_asana_data(self, asana_name: str) -> Optional[AsanaData]:
         """Получает данные асаны по имени"""
