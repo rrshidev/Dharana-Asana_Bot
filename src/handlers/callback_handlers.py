@@ -64,6 +64,8 @@ class CallbackHandlers:
         
         # Получаем имя асаны по ID
         asana_name = self.data_service.get_asana_by_id(callback_query.data)
+        logger.info(f"Callback data: {callback_query.data} -> Asana name: {asana_name}")
+        
         if not asana_name:
             await self.bot.send_message(
                 callback_query.from_user.id,
