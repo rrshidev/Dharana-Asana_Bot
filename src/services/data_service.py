@@ -144,26 +144,47 @@ class DataService:
     
     def get_basic_content(self, basic_name: str) -> tuple[str, Optional[str]]:
         """Получает контент для основы йоги"""
-        txt_path = join(self.basics_dir, f"{basic_name}.txt")
-        png_path = join(self.basics_dir, f"{basic_name}.png")
+        # Ищем файл, который заканчивается на basic_name (для поддержки файлов с номерами)
+        txt_path = None
+        png_path = None
+        
+        if exists(self.basics_dir):
+            # Ищем txt файл
+            for item in listdir(self.basics_dir):
+                if item.endswith('.txt') and item.replace('.txt', '').endswith(basic_name):
+                    txt_path = join(self.basics_dir, item)
+                    break
+            
+            # Ищем png файл с такой же логикой
+            for item in listdir(self.basics_dir):
+                if item.endswith('.png') and item.replace('.png', '').endswith(basic_name):
+                    png_path = join(self.basics_dir, item)
+                    break
         
         content = ""
-        if exists(txt_path):
+        if txt_path and exists(txt_path):
             try:
                 with open(txt_path, 'r', encoding='utf-8') as f:
                     content = f.read()
             except Exception as e:
                 logger.error(f"Error reading {txt_path}: {e}")
         
-        image_path = png_path if exists(png_path) else None
+        image_path = png_path if png_path and exists(png_path) else None
         
         return content, image_path
     
     def get_step_content(self, step_name: str) -> str:
         """Получает контент для ступени йоги"""
-        txt_path = join(self.steps_dir, f"{step_name}.txt")
+        # Ищем файл, который заканчивается на step_name (для поддержки файлов с номерами)
+        txt_path = None
         
-        if exists(txt_path):
+        if exists(self.steps_dir):
+            for item in listdir(self.steps_dir):
+                if item.endswith('.txt') and item.replace('.txt', '').endswith(step_name):
+                    txt_path = join(self.steps_dir, item)
+                    break
+        
+        if txt_path and exists(txt_path):
             try:
                 with open(txt_path, 'r', encoding='utf-8') as f:
                     return f.read()
