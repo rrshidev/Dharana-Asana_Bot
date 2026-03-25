@@ -48,31 +48,32 @@ class YogaBot:
         self.dp.message(Command('about_us'))(self.command_handlers.about_us_command)
         
         # Callback запросы
-        self.dp.callback_query(lambda c: c.data == 'catalog')(self.callback_handlers.catalog_callback)
-        self.dp.callback_query(lambda c: c.data == 'basics')(self.callback_handlers.basics_callback)
-        self.dp.callback_query(lambda c: c.data == 'steps')(self.callback_handlers.steps_callback)
-        self.dp.callback_query(lambda c: c.data == 'random_asana')(self.callback_handlers.random_asana_callback)
+        self.dp.callback_query(F.data == 'catalog')(self.callback_handlers.catalog_callback)
+        self.dp.callback_query(F.data == 'basics')(self.callback_handlers.basics_callback)
+        self.dp.callback_query(F.data == 'steps')(self.callback_handlers.steps_callback)
+        self.dp.callback_query(F.data == 'random_asana')(self.callback_handlers.random_asana_callback)
+        self.dp.callback_query(F.data == 'about')(self.callback_handlers.about_callback)
+        self.dp.callback_query(F.data == 'back')(self.callback_handlers.back_callback)
         
         # Динамические callback запросы
-        data_service = self.callback_handlers.data_service
-        bot_data = data_service.load_data()
+        data = self.callback_handlers.data_service.load_data()
         
         # Категории асан
-        for category_name in bot_data.categories.keys():
-            self.dp.callback_query(lambda c: c.data == category_name)(self.callback_handlers.category_callback)
+        for i, category_name in enumerate(data.categories.keys()):
+            self.dp.callback_query(F.data == f'category_{i}')(self.callback_handlers.category_callback)
         
         # Асаны
-        for category in bot_data.categories.values():
-            for asana in category.asanas:
-                self.dp.callback_query(lambda c: c.data == asana)(self.callback_handlers.asana_callback)
+        for category in data.categories.values():
+            for i, asana in enumerate(category.asanas):
+                self.dp.callback_query(F.data == f'asana_{i}')(self.callback_handlers.asana_callback)
         
         # Основы йоги
-        for basic in bot_data.basics:
-            self.dp.callback_query(F.data == basic)(self.callback_handlers.basic_item_callback)
+        for i, basic in enumerate(data.basics):
+            self.dp.callback_query(F.data == f'basic_{i}')(self.callback_handlers.basic_item_callback)
         
         # Ступени йоги
-        for step in bot_data.steps:
-            self.dp.callback_query(F.data == step)(self.callback_handlers.step_item_callback)
+        for i, step in enumerate(data.steps):
+            self.dp.callback_query(F.data == f'step_{i}')(self.callback_handlers.step_item_callback)
         
         # Текстовые сообщения
         self.dp.message()(self.message_handlers.text_message)

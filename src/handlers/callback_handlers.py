@@ -1,6 +1,7 @@
 import logging
 import os
 from aiogram import types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import FSInputFile
 
 from src.services.data_service import DataService
@@ -32,13 +33,12 @@ class CallbackHandlers:
         )
     
     async def category_callback(self, callback_query: types.CallbackQuery):
-        """Обработчик выбора категории асан"""
+        """Обработчик открытия категории асан"""
         await self.bot.answer_callback_query(callback_query.id)
         
-        data = self.data_service.load_data()
-        category_name = callback_query.data
-        
-        if category_name not in data.categories:
+        # Получаем имя категории по ID
+        category_name = self.data_service.get_category_by_id(callback_query.data)
+        if not category_name:
             await self.bot.send_message(
                 callback_query.from_user.id,
                 'Категория не найдена',
@@ -46,6 +46,7 @@ class CallbackHandlers:
             )
             return
         
+        data = self.data_service.load_data()
         category = data.categories[category_name]
         await self.bot.send_message(
             callback_query.from_user.id,
@@ -61,7 +62,17 @@ class CallbackHandlers:
         """Обработчик выбора асаны"""
         await self.bot.answer_callback_query(callback_query.id)
         
-        asana_data = self.data_service.get_asana_data(callback_query.data)
+        # Получаем имя асаны по ID
+        asana_name = self.data_service.get_asana_by_id(callback_query.data)
+        if not asana_name:
+            await self.bot.send_message(
+                callback_query.from_user.id,
+                'Асана не найдена',
+                reply_markup=self.keyboard_service.create_main_menu()
+            )
+            return
+        
+        asana_data = self.data_service.get_asana_data(asana_name)
         
         if not asana_data:
             await self.bot.send_message(
@@ -94,7 +105,7 @@ class CallbackHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         data = self.data_service.load_data()
-        keyboard = self.keyboard_service.create_simple_menu(data.basics)
+        keyboard = self.keyboard_service.create_simple_menu(data.basics, 'basic')
         
         await self.bot.send_message(
             callback_query.from_user.id,
@@ -106,17 +117,22 @@ class CallbackHandlers:
         """Обработчик выбора основы йоги"""
         await self.bot.answer_callback_query(callback_query.id)
         
-        # Добавим логирование для диагностики
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.info(f"Basic item callback: {callback_query.data}")
+        # Получаем имя основы по ID
+        basic_name = self.data_service.get_basic_by_id(callback_query.data)
+        if not basic_name:
+            await self.bot.send_message(
+                callback_query.from_user.id,
+                'Основы не найдены',
+                reply_markup=self.keyboard_service.create_main_menu()
+            )
+            return
         
-        content, image_path = self.data_service.get_basic_content(callback_query.data)
+        content, image_path = self.data_service.get_basic_content(basic_name)
         
         if not content:
             await self.bot.send_message(
                 callback_query.from_user.id,
-                f'Содержимое не найдено для: {callback_query.data}',
+                f'Содержимое не найдено для: {basic_name}',
                 reply_markup=self.keyboard_service.create_main_menu()
             )
             return
@@ -133,7 +149,7 @@ class CallbackHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         data = self.data_service.load_data()
-        keyboard = self.keyboard_service.create_simple_menu(data.steps)
+        keyboard = self.keyboard_service.create_simple_menu(data.steps, 'step')
         
         await self.bot.send_message(
             callback_query.from_user.id,
@@ -145,12 +161,22 @@ class CallbackHandlers:
         """Обработчик выбора ступени йоги"""
         await self.bot.answer_callback_query(callback_query.id)
         
-        content = self.data_service.get_step_content(callback_query.data)
+        # Получаем имя ступени по ID
+        step_name = self.data_service.get_step_by_id(callback_query.data)
+        if not step_name:
+            await self.bot.send_message(
+                callback_query.from_user.id,
+                'Ступень не найдена',
+                reply_markup=self.keyboard_service.create_main_menu()
+            )
+            return
+        
+        content = self.data_service.get_step_content(step_name)
         
         if not content:
             await self.bot.send_message(
                 callback_query.from_user.id,
-                'Содержимое не найдено',
+                f'Содержимое не найдено для: {step_name}',
                 reply_markup=self.keyboard_service.create_main_menu()
             )
             return
@@ -163,7 +189,22 @@ class CallbackHandlers:
     
     async def _send_asana_with_thumbnail(self, user_id: int, asana_name: str, category_name: str):
         """Отправляет асану с миниатюрой"""
-        keyboard = self.keyboard_service.create_asana_button(asana_name)
+        # Находим ID для асаны через маппинг
+        asana_id = None
+        data = self.data_service.load_data()
+        for i, name in enumerate(data.categories[category_name].asanas):
+            if name == asana_name:
+                asana_id = f'asana_{i}'
+                break
+        
+        if asana_id:
+            # Создаем кнопку с ID
+            keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[[InlineKeyboardButton(text=asana_name, callback_data=asana_id)]]
+            )
+        else:
+            # Если ID не найден, создаем кнопку без ID
+            keyboard = self.keyboard_service.create_asana_button(asana_name)
         
         # Пытаемся отправить миниатюру .png
         png_path = os.path.normpath(
@@ -229,6 +270,31 @@ class CallbackHandlers:
         await self.bot.send_message(
             user_id,
             text='Каталог',
+            reply_markup=self.keyboard_service.create_main_menu()
+        )
+    
+    async def back_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик кнопки назад"""
+        await self.bot.answer_callback_query(callback_query.id)
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            'Выберите раздел:',
+            reply_markup=self.keyboard_service.create_main_menu()
+        )
+    
+    async def about_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик информации о боте"""
+        await self.bot.answer_callback_query(callback_query.id)
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            '🧘‍♂️ Йога Асана Бот\n\n'
+            'Этот бот поможет тебе изучить асаны йоги, их описание и правильное выполнение.\n\n'
+            'Доступные разделы:\n'
+            '📚 Каталог асан - полный список поз с фотографиями\n'
+            '🧘 Основы йоги - базовые понятия и термины\n'
+            '📈 Ступени йоги - 8 уровней практики\n'
+            '🎲 Случайная асана - случайная поза для практики\n\n'
+            'Создан с любовью к йоге 🙏',
             reply_markup=self.keyboard_service.create_main_menu()
         )
     

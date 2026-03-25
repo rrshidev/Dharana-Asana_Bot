@@ -1,8 +1,9 @@
 import os
 import logging
-from typing import Dict, List, Optional
+import random
 from os import listdir
-from os.path import join, isfile, exists
+from os.path import exists, join, isfile
+from typing import List, Dict, Optional
 
 from src.models.data_models import AsanaData, CategoryData, BotData
 
@@ -10,13 +11,19 @@ logger = logging.getLogger(__name__)
 
 
 class DataService:
-    """Сервис для работы с данными асан и контента"""
+    """Сервис для работы с данными бота"""
     
-    def __init__(self, data_dir: str = "bot_data"):
-        self.data_dir = data_dir
-        self.catalog_dir = join(data_dir, "catalog")
-        self.basics_dir = join(data_dir, "basics")
-        self.steps_dir = join(data_dir, "steps")
+    def __init__(self):
+        self.catalog_dir = "bot_data/catalog"
+        self.basics_dir = "bot_data/basics"
+        self.steps_dir = "bot_data/steps"
+        
+        # Кэширование данных и маппинги
+        self._cached_data = None
+        self._category_mapping = {}  # ID -> category_name
+        self._asana_mapping = {}      # ID -> asana_name
+        self._basic_mapping = {}       # ID -> basic_name
+        self._step_mapping = {}        # ID -> step_name
         
         # Описания категорий
         self.asana_descriptions = {
@@ -49,7 +56,7 @@ class DataService:
             logger.error(f"Directory {self.catalog_dir} not found")
             return categories
         
-        asana_types = [item for item in listdir(self.catalog_dir) if not isfile(join(self.catalog_dir, item))]
+        asana_types = [item for item in os.listdir(self.catalog_dir) if not isfile(join(self.catalog_dir, item))]
         
         for asana_type in asana_types:
             if asana_type in self.asana_descriptions:
@@ -83,7 +90,7 @@ class DataService:
         if not exists(self.basics_dir):
             return []
         
-        basics_files = [item for item in listdir(self.basics_dir) if isfile(join(self.basics_dir, item))]
+        basics_files = [item for item in os.listdir(self.basics_dir) if isfile(join(self.basics_dir, item))]
         basics = []
         for basic in basics_files:
             if basic.endswith('.txt'):
@@ -102,7 +109,7 @@ class DataService:
         if not exists(self.steps_dir):
             return []
         
-        steps_files = [item for item in listdir(self.steps_dir) if isfile(join(self.steps_dir, item))]
+        steps_files = [item for item in os.listdir(self.steps_dir) if isfile(join(self.steps_dir, item))]
         steps = []
         for step in steps_files:
             if step.endswith('.txt'):
@@ -175,14 +182,14 @@ class DataService:
         
         if exists(self.basics_dir):
             # Ищем txt файл
-            for item in listdir(self.basics_dir):
+            for item in os.listdir(self.basics_dir):
                 if item.endswith('.txt') and item.replace('.txt', '').endswith(basic_name):
                     txt_path = join(self.basics_dir, item)
                     logger.info(f"Found txt: {item}")
                     break
             
             # Ищем png файл с такой же логикой
-            for item in listdir(self.basics_dir):
+            for item in os.listdir(self.basics_dir):
                 if item.endswith('.png') and item.replace('.png', '').endswith(basic_name):
                     png_path = join(self.basics_dir, item)
                     logger.info(f"Found png: {item}")
@@ -208,7 +215,7 @@ class DataService:
         txt_path = None
         
         if exists(self.steps_dir):
-            for item in listdir(self.steps_dir):
+            for item in os.listdir(self.steps_dir):
                 if item.endswith('.txt') and item.replace('.txt', '').endswith(step_name):
                     txt_path = join(self.steps_dir, item)
                     break
@@ -221,3 +228,55 @@ class DataService:
                 logger.error(f"Error reading {txt_path}: {e}")
         
         return ""
+    
+    def get_category_by_id(self, category_id: str) -> Optional[str]:
+        """Получает имя категории по ID"""
+        data = self.load_data()
+        if not self._category_mapping:
+            # Строим маппинг категорий
+            categories = list(data.categories.keys())
+            for i, category in enumerate(categories):
+                self._category_mapping[f'category_{i}'] = category
+        
+        return self._category_mapping.get(category_id)
+    
+    def get_asana_by_id(self, asana_id: str) -> Optional[str]:
+        """Получает имя асаны по ID"""
+        data = self.load_data()
+        if not self._asana_mapping:
+            # Строим маппинг асан
+            all_asanas = []
+            for category in data.categories.values():
+                all_asanas.extend(category.asanas)
+            
+            if not all_asanas:
+                return None
+            
+            # Строим маппинг асан с тем же порядком, что и в _load_asanas_for_category
+            asana_index = 0
+            for category in data.categories.values():
+                for asana in category.asanas:
+                    self._asana_mapping[f'asana_{asana_index}'] = asana
+                    asana_index += 1
+        
+        return self._asana_mapping.get(asana_id)
+    
+    def get_basic_by_id(self, basic_id: str) -> Optional[str]:
+        """Получает имя основы по ID"""
+        data = self.load_data()
+        if not self._basic_mapping:
+            # Строим маппинг основ
+            for i, basic in enumerate(data.basics):
+                self._basic_mapping[f'basic_{i}'] = basic
+        
+        return self._basic_mapping.get(basic_id)
+    
+    def get_step_by_id(self, step_id: str) -> Optional[str]:
+        """Получает имя ступени по ID"""
+        data = self.load_data()
+        if not self._step_mapping:
+            # Строим маппинг ступеней
+            for i, step in enumerate(data.steps):
+                self._step_mapping[f'step_{i}'] = step
+        
+        return self._step_mapping.get(step_id)
