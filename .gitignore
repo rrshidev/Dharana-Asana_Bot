@@ -51,18 +51,8 @@ Thumbs.db
 logs/
 
 # Media files (too large for git)
-bot_data/**/*.jpg
-bot_data/**/*.jpeg
-bot_data/**/*.png
-bot_data/**/*.gif
-bot_data/**/*.bmp
-bot_data/**/*.webp
-
-# Keep directory structure but exclude media
+bot_data/
 !bot_data/.gitkeep
-!bot_data/catalog/.gitkeep
-!bot_data/basics/.gitkeep
-!bot_data/steps/.gitkeep
 
 # Environment files
 .env
