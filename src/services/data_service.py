@@ -164,6 +164,11 @@ class DataService:
     
     def get_basic_content(self, basic_name: str) -> tuple[str, Optional[str]]:
         """Получает контент для основы йоги"""
+        # Добавим логирование для диагностики
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Looking for basic: '{basic_name}'")
+        
         # Ищем файл, который заканчивается на basic_name (для поддержки файлов с номерами)
         txt_path = None
         png_path = None
@@ -173,12 +178,14 @@ class DataService:
             for item in listdir(self.basics_dir):
                 if item.endswith('.txt') and item.replace('.txt', '').endswith(basic_name):
                     txt_path = join(self.basics_dir, item)
+                    logger.info(f"Found txt: {item}")
                     break
             
             # Ищем png файл с такой же логикой
             for item in listdir(self.basics_dir):
                 if item.endswith('.png') and item.replace('.png', '').endswith(basic_name):
                     png_path = join(self.basics_dir, item)
+                    logger.info(f"Found png: {item}")
                     break
         
         content = ""
@@ -188,6 +195,8 @@ class DataService:
                     content = f.read()
             except Exception as e:
                 logger.error(f"Error reading {txt_path}: {e}")
+        else:
+            logger.warning(f"Txt file not found for: '{basic_name}'")
         
         image_path = png_path if png_path and exists(png_path) else None
         

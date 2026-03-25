@@ -106,12 +106,17 @@ class CallbackHandlers:
         """Обработчик выбора основы йоги"""
         await self.bot.answer_callback_query(callback_query.id)
         
+        # Добавим логирование для диагностики
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Basic item callback: {callback_query.data}")
+        
         content, image_path = self.data_service.get_basic_content(callback_query.data)
         
         if not content:
             await self.bot.send_message(
                 callback_query.from_user.id,
-                'Содержимое не найдено',
+                f'Содержимое не найдено для: {callback_query.data}',
                 reply_markup=self.keyboard_service.create_main_menu()
             )
             return
