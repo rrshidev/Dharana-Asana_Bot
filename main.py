@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
 
 from config import Token
@@ -68,11 +68,11 @@ class YogaBot:
         
         # Основы йоги
         for basic in bot_data.basics:
-            self.dp.callback_query(lambda c: c.data == basic)(self.callback_handlers.basic_item_callback)
+            self.dp.callback_query(F.data == basic)(self.callback_handlers.basic_item_callback)
         
         # Ступени йоги
         for step in bot_data.steps:
-            self.dp.callback_query(lambda c: c.data == step)(self.callback_handlers.step_item_callback)
+            self.dp.callback_query(F.data == step)(self.callback_handlers.step_item_callback)
         
         # Текстовые сообщения
         self.dp.message()(self.message_handlers.text_message)
