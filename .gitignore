@@ -1,0 +1,83 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Media files (too large for git)
+bot_data/**/*.jpg
+bot_data/**/*.jpeg
+bot_data/**/*.png
+bot_data/**/*.gif
+bot_data/**/*.bmp
+bot_data/**/*.webp
+
+# Keep directory structure but exclude media
+!bot_data/.gitkeep
+!bot_data/catalog/.gitkeep
+!bot_data/basics/.gitkeep
+!bot_data/steps/.gitkeep
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.staging
+
+# Docker
+.dockerignore
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+
+# Cache
+.cache/
+.pytest_cache/
