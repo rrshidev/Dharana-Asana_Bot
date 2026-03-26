@@ -44,11 +44,11 @@ class KeyboardService:
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
     @staticmethod
-    def create_asanas_menu(asanas: List[str]) -> InlineKeyboardMarkup:
+    def create_asanas_menu(asanas: List[str], start_index: int = 0) -> InlineKeyboardMarkup:
         """Создает меню асан"""
         buttons = []
         for i, asana in enumerate(asanas):
-            buttons.append([InlineKeyboardButton(text=asana, callback_data=f'asana_{i}')])
+            buttons.append([InlineKeyboardButton(text=asana, callback_data=f'asana_{start_index + i}')])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
     @staticmethod

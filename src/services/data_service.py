@@ -240,6 +240,16 @@ class DataService:
         
         return self._category_mapping.get(category_id)
     
+    def get_category_global_start_index(self, category_name: str) -> int:
+        """Получает глобальный стартовый индекс для категории"""
+        data = self.load_data()
+        global_index = 0
+        for cat_name, category in data.categories.items():
+            if cat_name == category_name:
+                return global_index
+            global_index += len(category.asanas)
+        return 0
+    
     def get_asana_by_id(self, asana_id: str) -> Optional[str]:
         """Получает имя асаны по ID"""
         data = self.load_data()

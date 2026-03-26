@@ -48,15 +48,23 @@ class CallbackHandlers:
         
         data = self.data_service.load_data()
         category = data.categories[category_name]
+        
+        # Получаем глобальный стартовый индекс для категории
+        start_index = self.data_service.get_category_global_start_index(category_name)
+        
         await self.bot.send_message(
             callback_query.from_user.id,
             f'{category.description} приведен ниже.\n'
             'Нажми кнопку с искомой асаной\nПолучишь её фото и описание!'
         )
         
-        # Отправляем каждую асану с миниатюрой и кнопкой
-        for asana in category.asanas:
-            await self._send_asana_with_thumbnail(callback_query.from_user.id, asana, category_name)
+        # Отправляем меню асан
+        asanas_menu = self.keyboard_service.create_asanas_menu(category.asanas, start_index)
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            'Выбери асану:',
+            reply_markup=asanas_menu
+        )
     
     async def asana_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора асаны"""
