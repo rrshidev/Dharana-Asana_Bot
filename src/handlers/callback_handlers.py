@@ -58,13 +58,10 @@ class CallbackHandlers:
             'Нажми кнопку с искомой асаной\nПолучишь её фото и описание!'
         )
         
-        # Отправляем меню асан
-        asanas_menu = self.keyboard_service.create_asanas_menu(category.asanas, start_index)
-        await self.bot.send_message(
-            callback_query.from_user.id,
-            'Выбери асану:',
-            reply_markup=asanas_menu
-        )
+        # Отправляем каждую асану с миниатюрой и кнопкой
+        global_asana_index = self.data_service.get_category_global_start_index(category_name)
+        for i, asana in enumerate(category.asanas):
+            await self._send_asana_with_thumbnail(callback_query.from_user.id, asana, category_name, global_asana_index + i)
     
     async def asana_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора асаны"""
@@ -197,24 +194,12 @@ class CallbackHandlers:
             'Ступень йоги:'
         )
     
-    async def _send_asana_with_thumbnail(self, user_id: int, asana_name: str, category_name: str):
+    async def _send_asana_with_thumbnail(self, user_id: int, asana_name: str, category_name: str, global_asana_index: int):
         """Отправляет асану с миниатюрой"""
-        # Находим ID для асаны через маппинг
-        asana_id = None
-        data = self.data_service.load_data()
-        for i, name in enumerate(data.categories[category_name].asanas):
-            if name == asana_name:
-                asana_id = f'asana_{i}'
-                break
-        
-        if asana_id:
-            # Создаем кнопку с ID
-            keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text=asana_name, callback_data=asana_id)]]
-            )
-        else:
-            # Если ID не найден, создаем кнопку без ID
-            keyboard = self.keyboard_service.create_asana_button(asana_name)
+        # Создаем кнопку с глобальным индексом
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text=asana_name, callback_data=f'asana_{global_asana_index}')]]
+        )
         
         # Пытаемся отправить миниатюру .png
         png_path = os.path.normpath(

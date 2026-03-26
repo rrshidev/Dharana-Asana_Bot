@@ -62,10 +62,13 @@ class YogaBot:
         for i, category_name in enumerate(data.categories.keys()):
             self.dp.callback_query(F.data == f'category_{i}')(self.callback_handlers.category_callback)
         
-        # Асаны
+        # Асаны - глобальная регистрация
+        data = self.callback_handlers.data_service.load_data()
+        global_asana_index = 0
         for category in data.categories.values():
             for i, asana in enumerate(category.asanas):
-                self.dp.callback_query(F.data == f'asana_{i}')(self.callback_handlers.asana_callback)
+                self.dp.callback_query(F.data == f'asana_{global_asana_index}')(self.callback_handlers.asana_callback)
+                global_asana_index += 1
         
         # Основы йоги
         for i, basic in enumerate(data.basics):
