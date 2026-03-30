@@ -6,6 +6,7 @@ from aiogram.types.input_file import FSInputFile
 
 from src.services.data_service import DataService
 from src.utils.keyboard_service import KeyboardService
+from src.handlers.timer_handlers import TimerHandlers
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class CallbackHandlers:
         self.bot = bot
         self.data_service = DataService()
         self.keyboard_service = KeyboardService()
+        self.timer_handlers = TimerHandlers(bot, self.data_service, self.keyboard_service)
     
     async def catalog_callback(self, callback_query: types.CallbackQuery):
         """Обработчик открытия каталога"""
@@ -288,7 +290,11 @@ class CallbackHandlers:
             '📚 Каталог асан - полный список поз с фотографиями\n'
             '🧘 Основы йоги - базовые понятия и термины\n'
             '📈 Ступени йоги - 8 уровней практики\n'
-            '🎲 Случайная асана - случайная поза для практики\n\n'
+            '🎲 Случайная асана - случайная поза для практики\n'
+            '🕐 Таймер - многофункциональный таймер для практики:\n'
+            '   • 🧘 Медитация - 1-60 минут\n'
+            '   • 🧘‍♂️ Асана - настраиваемые циклы работы/отдыха\n'
+            '   • 🌬️ Пранаяма - индивидуальное время упражнений\n\n'
             'Создан с любовью к йоге 🙏',
             reply_markup=self.keyboard_service.create_main_menu()
         )
