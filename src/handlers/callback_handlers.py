@@ -5,6 +5,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import FSInputFile
 
 from src.services.data_service import DataService
+from src.services.filter_service import FilterService
+from src.handlers.filter_handlers import FilterHandlers
 from src.utils.keyboard_service import KeyboardService
 from src.handlers.timer_handlers import TimerHandlers
 
@@ -17,7 +19,9 @@ class CallbackHandlers:
     def __init__(self, bot):
         self.bot = bot
         self.data_service = DataService()
+        self.filter_service = FilterService(self.data_service)
         self.keyboard_service = KeyboardService()
+        self.filter_handlers = FilterHandlers(bot, self.data_service)
         self.timer_handlers = TimerHandlers(bot, self.data_service, self.keyboard_service)
     
     async def catalog_callback(self, callback_query: types.CallbackQuery):
@@ -291,6 +295,7 @@ class CallbackHandlers:
             '🧘 Основы йоги - базовые понятия и термины\n'
             '📈 Ступени йоги - 8 уровней практики\n'
             '🎲 Случайная асана - случайная поза для практики\n'
+            '🔍 Фильтры асан - подбор по сложности и эффектам\n'
             '🕐 Таймер - многофункциональный таймер для практики:\n'
             '   • 🧘 Медитация - 1-60 минут\n'
             '   • 🧘‍♂️ Асана - настраиваемые циклы работы/отдыха\n'
@@ -298,6 +303,34 @@ class CallbackHandlers:
             'Создан с любовью к йоге 🙏',
             reply_markup=self.keyboard_service.create_main_menu()
         )
+    
+    async def filter_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик меню фильтров"""
+        await self.filter_handlers.show_filter_menu_callback(callback_query)
+    
+    async def filter_difficulty_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик меню фильтра сложности"""
+        await self.filter_handlers.show_difficulty_filter_menu(callback_query)
+    
+    async def filter_effect_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик меню фильтра эффектов"""
+        await self.filter_handlers.show_effect_filter_menu(callback_query)
+    
+    async def filter_difficulty_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик выбора фильтра сложности"""
+        await self.filter_handlers.filter_difficulty_callback(callback_query)
+    
+    async def filter_effect_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик выбора фильтра эффектов"""
+        await self.filter_handlers.filter_effect_callback(callback_query)
+    
+    async def filter_reset_all_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик сброса всех фильтров"""
+        await self.filter_handlers.reset_all_filters(callback_query)
+    
+    async def daily_asana_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик асаны дня"""
+        await self.filter_handlers.show_daily_asana(callback_query)
     
     async def _send_long_text_with_image(self, user_id: int, text: str, image_path: str, title: str):
         """Отправляет длинный текст с изображением"""

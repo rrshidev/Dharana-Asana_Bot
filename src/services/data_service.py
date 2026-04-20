@@ -282,3 +282,25 @@ class DataService:
                 self._step_mapping[f'step_{i}'] = step
         
         return self._step_mapping.get(step_id)
+    
+    def get_all_asanas(self) -> List[AsanaData]:
+        """Получить все асаны в виде объектов AsanaData"""
+        data = self.load_data()
+        all_asanas = []
+        
+        for category_name, category in data.categories.items():
+            for asana_name in category.asanas:
+                # Создаем объект AsanaData с базовыми параметрами
+                # В будущем здесь можно будет добавить сложность и эффекты из конфигурационных файлов
+                asana_data = AsanaData(
+                    name=asana_name,
+                    description="",  # Будет загружено при необходимости
+                    image_path="",   # Будет загружено при необходимости
+                    category=category_name,
+                    difficulty=1,  # По умолчанию начальный уровень
+                    effects=[],     # По умолчанию без эффектов
+                    contraindications=[]  # По умолчанию без противопоказаний
+                )
+                all_asanas.append(asana_data)
+        
+        return all_asanas

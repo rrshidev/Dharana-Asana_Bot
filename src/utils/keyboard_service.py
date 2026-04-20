@@ -11,11 +11,12 @@ class KeyboardService:
     def create_main_menu() -> InlineKeyboardMarkup:
         """Создает главное меню бота"""
         buttons = [
-            [InlineKeyboardButton(text='!Каталог асан!', callback_data='catalog')],
-            [InlineKeyboardButton(text='🧘‍♂️ Основы йоги', callback_data='basics')],
-            [InlineKeyboardButton(text='🧘 8 ступеней йоги', callback_data='steps')],
+            [InlineKeyboardButton(text='📚 Каталог асан', callback_data='catalog')],
+            [InlineKeyboardButton(text='🧘 Основы йоги', callback_data='basics')],
+            [InlineKeyboardButton(text='📈 8 ступеней йоги', callback_data='steps')],
             [InlineKeyboardButton(text='🎲 Асана дня, согласно карме', callback_data='random_asana')],
             [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
+            [InlineKeyboardButton(text='🔍 Фильтры асан', callback_data='filter_menu')],
             [InlineKeyboardButton(text='ℹ️ О боте', callback_data='about')],
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)
