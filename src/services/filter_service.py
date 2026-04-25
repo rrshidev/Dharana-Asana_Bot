@@ -44,7 +44,7 @@ class FilterService:
         
         keyboard.append([{
             "text": "🔙 Назад",
-            "callback_data": "catalog"
+            "callback_data": "filter_menu"
         }])
         
         return {"inline_keyboard": keyboard}
@@ -58,7 +58,11 @@ class FilterService:
             AsanaEffect.BACK_PAIN.value,
             AsanaEffect.CALM_MIND.value,
             AsanaEffect.BOOST_ENERGY.value,
-            AsanaEffect.DIGESTION.value
+            AsanaEffect.DIGESTION.value,
+            AsanaEffect.FLEXIBILITY.value,
+            AsanaEffect.BALANCE.value,
+            AsanaEffect.STRENGTH.value,
+            AsanaEffect.STRESS_RELIEF.value
         ]
         
         for effect in main_effects:
@@ -84,7 +88,7 @@ class FilterService:
         
         keyboard.append([{
             "text": "🔙 Назад",
-            "callback_data": "catalog"
+            "callback_data": "filter_menu"
         }])
         
         return {"inline_keyboard": keyboard}
@@ -104,7 +108,7 @@ class FilterService:
         if preferences.effects:
             filtered_asanas = [
                 asana for asana in filtered_asanas 
-                if asana.effects and any(effect in asana.effects for effect in preferences.effects)
+                if asana.effects and all(effect in asana.effects for effect in preferences.effects)
             ]
         
         return filtered_asanas

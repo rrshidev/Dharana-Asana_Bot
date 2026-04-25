@@ -62,6 +62,7 @@ class YogaBot:
         self.dp.callback_query(F.data == 'filter_effect_menu')(self.callback_handlers.filter_effect_menu_callback)
         self.dp.callback_query(F.data == 'filter_reset_all')(self.callback_handlers.filter_reset_all_callback)
         self.dp.callback_query(F.data == 'daily_asana')(self.callback_handlers.daily_asana_callback)
+        self.dp.callback_query(F.data == 'main_menu')(self.callback_handlers.main_menu_callback)
         logger.info("Basic callbacks registered")
         self.dp.callback_query(F.data == 'back')(self.callback_handlers.back_callback)
         logger.info("Basic callbacks registered")
@@ -118,8 +119,9 @@ class YogaBot:
         self.dp.callback_query(F.data.startswith('timer_'))(self.callback_handlers.timer_handlers.timer_control_callback)
         
         # Фильтры асан
-        self.dp.callback_query(F.data.startswith('filter_difficulty_'))(self.callback_handlers.filter_difficulty_callback)
-        self.dp.callback_query(F.data.startswith('filter_effect_'))(self.callback_handlers.filter_effect_callback)
+        self.dp.callback_query(F.data.startswith('filter_difficulty_'))(self.callback_handlers.filter_handlers.filter_difficulty_callback)
+        self.dp.callback_query(F.data.startswith('filter_effect_'))(self.callback_handlers.filter_handlers.filter_effect_callback)
+        self.dp.callback_query(F.data.startswith('fa_'))(self.callback_handlers.filter_handlers.filtered_asana_callback)
         
         # Динамические callback запросы
         data = self.callback_handlers.data_service.load_data()

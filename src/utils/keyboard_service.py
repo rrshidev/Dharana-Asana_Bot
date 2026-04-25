@@ -78,5 +78,19 @@ class KeyboardService:
     def create_back_to_catalog_menu() -> InlineKeyboardMarkup:
         """Создает кнопку возврата в каталог"""
         return InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text='Каталог', callback_data='catalog')]]
+            inline_keyboard=[[InlineKeyboardButton(text='🔙 Назад в каталог', callback_data='catalog')]]
+        )
+    
+    @staticmethod
+    def create_back_to_filters_menu() -> InlineKeyboardMarkup:
+        """Создает кнопку возврата к фильтрам"""
+        return InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text='🔙 Назад к фильтрам', callback_data='filter_menu')]]
+        )
+    
+    @staticmethod
+    def create_back_to_main_menu() -> InlineKeyboardMarkup:
+        """Создает кнопку возврата в главное меню"""
+        return InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')]]
         )

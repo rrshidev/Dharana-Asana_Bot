@@ -316,6 +316,10 @@ class CallbackHandlers:
         """Обработчик меню фильтра эффектов"""
         await self.filter_handlers.show_effect_filter_menu(callback_query)
     
+    async def main_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик возврата в главное меню"""
+        await self.show_main_menu(callback_query.from_user.id, callback_query.message.message_id)
+    
     async def filter_difficulty_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора фильтра сложности"""
         await self.filter_handlers.filter_difficulty_callback(callback_query)
