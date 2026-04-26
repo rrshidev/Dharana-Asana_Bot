@@ -14,6 +14,8 @@ from config import Token
 from src.handlers.command_handlers import CommandHandlers
 from src.handlers.callback_handlers import CallbackHandlers
 from src.handlers.message_handlers import MessageHandlers
+from src.handlers.daily_asana_handlers import DailyAsanaHandlers
+from src.services.database_service import db_service
 
 
 # Настройка логирования
@@ -36,6 +38,14 @@ class YogaBot:
         self.callback_handlers = CallbackHandlers(self.bot)
         self.message_handlers = MessageHandlers(self.bot)
         
+        # Инициализация асаны дня
+        from src.services.data_service import DataService
+        data_service = DataService()
+        self.daily_asana_handlers = DailyAsanaHandlers(self.bot, data_service)
+        
+        # Передаем daily_asana_handlers в callback_handlers
+        self.callback_handlers.daily_asana_handlers = self.daily_asana_handlers
+        
         # Регистрация обработчиков сразу в конструкторе
         self._register_handlers()
     
@@ -49,6 +59,7 @@ class YogaBot:
         self.dp.message(Command('what'))(self.command_handlers.what_command)
         self.dp.message(Command('info'))(self.command_handlers.info_command)
         self.dp.message(Command('about_us'))(self.command_handlers.about_us_command)
+        self.dp.message(Command('asana_day'))(self.daily_asana_handlers.daily_asana_command)
         logger.info("Commands registered")
         
         # Callback запросы
@@ -64,6 +75,30 @@ class YogaBot:
         self.dp.callback_query(F.data == 'daily_asana')(self.callback_handlers.daily_asana_callback)
         self.dp.callback_query(F.data == 'main_menu')(self.callback_handlers.main_menu_callback)
         logger.info("Basic callbacks registered")
+        
+        # Асана дня
+        self.dp.callback_query(F.data == 'daily_asana')(self.daily_asana_handlers.daily_asana_settings_callback)
+        self.dp.callback_query(F.data == 'daily_asana_now')(self.daily_asana_handlers.daily_asana_now_callback)
+        self.dp.callback_query(F.data.startswith('daily_time_set_'))(self.daily_asana_handlers.daily_asana_time_callback)
+        self.dp.callback_query(F.data.startswith('daily_welcome_time_'))(self.daily_asana_handlers.daily_welcome_time_callback)
+        self.dp.callback_query(F.data.startswith('premium_upgrade_'))(self.daily_asana_handlers.premium_upgrade_callback)
+        self.dp.callback_query(F.data == 'daily_asana_disable')(self.daily_asana_handlers.daily_asana_disable_callback)
+        self.dp.callback_query(F.data == 'daily_timezone_settings')(self.daily_asana_handlers.daily_timezone_settings_callback)
+        self.dp.callback_query(F.data.startswith('daily_timezone_select_'))(self.daily_asana_handlers.daily_timezone_select_callback)
+        self.dp.callback_query(F.data == 'daily_time_manual')(self.daily_asana_handlers.daily_time_manual_callback)
+        self.dp.callback_query(F.data == 'daily_time_manual_welcome')(self.daily_asana_handlers.daily_time_manual_welcome_callback)
+        
+        # Обработчики практики асаны дня (более конкретные паттерны идут ПЕРВЫМИ)
+        self.dp.callback_query(F.data.startswith('daily_practice_start_'))(self.daily_asana_handlers.daily_practice_start_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_rest_'))(self.daily_asana_handlers.daily_practice_rest_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_work_'))(self.daily_asana_handlers.daily_practice_work_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_custom_'))(self.daily_asana_handlers.daily_practice_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_'))(self.daily_asana_handlers.daily_practice_callback)
+        
+        # Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)
+        self.dp.message(F.text)(self.handle_text_message)
+        logger.info("Daily asana callbacks registered")
+        
         self.dp.callback_query(F.data == 'back')(self.callback_handlers.back_callback)
         logger.info("Basic callbacks registered")
         
@@ -146,17 +181,20 @@ class YogaBot:
         for i, step in enumerate(data.steps):
             self.dp.callback_query(F.data == f'step_{i}')(self.callback_handlers.step_item_callback)
         
-        # Обработчик ручного ввода времени медитации - ставим ПЕРВЫМ
-        self.dp.message()(self.callback_handlers.timer_handlers.handle_meditation_time_input)
-        
-        # Текстовые сообщения
-        self.dp.message()(self.message_handlers.text_message)
-        
         # Универсальный отладочный обработчик - ставим ПОСЛЕ всех остальных
         logger.info("Registering debug callback handler...")
-        # self.dp.callback_query()(self.debug_callback)  # Временно отключаем
+        self.dp.callback_query()(self.debug_callback)
         logger.info("Debug callback handler registered")
         logger.info("Handler registration completed!")
+    
+    async def debug_callback(self, callback_query: types.CallbackQuery):
+        """Отладочный обработчик для всех остальных callback'ов"""
+        logger.info(f"DEBUG: Unhandled callback received: {callback_query.data}")
+        await self.bot.answer_callback_query(callback_query.id)
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            f"DEBUG: Получен callback: {callback_query.data}\nЭтот callback не обработан."
+        )
     
     async def start(self):
         """Запускает бота"""
@@ -165,7 +203,46 @@ class YogaBot:
         # Запускаем фоновую задачу обновления таймеров
         asyncio.create_task(self.callback_handlers.timer_handlers.start_timer_update_loop())
         
+        # Запускаем планировщик асаны дня
+        asyncio.create_task(self.daily_asana_handlers.start_scheduler())
+        
         await self.dp.start_polling(self.bot, skip_updates=True)
+
+    async def handle_text_message(self, message: types.Message):
+        """Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)"""
+        user_id = message.from_user.id
+        text = message.text.strip()
+        
+        # Сначала проверяем, ожидаем ли мы ввод времени
+        if hasattr(self.daily_asana_handlers, 'waiting_for_time_input') and \
+           self.daily_asana_handlers.waiting_for_time_input == user_id:
+            await self.daily_asana_handlers.handle_time_input(message)
+            return
+        
+        # Проверяем, является ли текст числом (для таймера медитации)
+        if text.isdigit():
+            await self.callback_handlers.timer_handlers.handle_meditation_time_input(message)
+            return
+        
+        # Проверяем, является ли текст временем в формате ЧЧ:ММ
+        if ':' in text:
+            parts = text.split(':')
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                # Проверяем, что это валидное время
+                try:
+                    hour = int(parts[0])
+                    minute = int(parts[1])
+                    if 0 <= hour <= 23 and 0 <= minute <= 59:
+                        # Если ожидается ввод времени, отправляем в обработчик времени
+                        if hasattr(self.daily_asana_handlers, 'waiting_for_time_input') and \
+                           self.daily_asana_handlers.waiting_for_time_input == user_id:
+                            await self.daily_asana_handlers.handle_time_input(message)
+                            return
+                except ValueError:
+                    pass
+        
+        # Если это не время и не число, ищем асану
+        await self.message_handlers.text_message(message)
 
     async def debug_callback(self, callback_query: types.CallbackQuery):
         """Отладочный обработчик для всех остальных callback'ов"""

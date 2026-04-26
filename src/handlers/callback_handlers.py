@@ -23,6 +23,7 @@ class CallbackHandlers:
         self.keyboard_service = KeyboardService()
         self.filter_handlers = FilterHandlers(bot, self.data_service)
         self.timer_handlers = TimerHandlers(bot, self.data_service, self.keyboard_service)
+        self.daily_asana_handlers = None  # Установится позже
     
     async def catalog_callback(self, callback_query: types.CallbackQuery):
         """Обработчик открытия каталога"""
@@ -320,9 +321,35 @@ class CallbackHandlers:
         """Обработчик возврата в главное меню"""
         await self.show_main_menu(callback_query.from_user.id, callback_query.message.message_id)
     
+    async def show_main_menu(self, user_id: int, message_id: int = None):
+        """Показать главное меню"""
+        from src.utils.keyboard_service import KeyboardService
+        keyboard_service = KeyboardService()
+        
+        main_menu_text = (
+            "🧘‍♂️ **Добро пожаловать в Йога Бот!**\n\n"
+            "Выберите раздел:"
+        )
+        
+        keyboard = keyboard_service.create_main_menu()
+        
+        if message_id:
+            await self.bot.edit_message_text(
+                chat_id=user_id,
+                message_id=message_id,
+                text=main_menu_text,
+                reply_markup=keyboard
+            )
+        else:
+            await self.bot.send_message(
+                chat_id=user_id,
+                text=main_menu_text,
+                reply_markup=keyboard
+            )
+    
     async def filter_difficulty_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора фильтра сложности"""
-        await self.filter_handlers.filter_difficulty_callback(callback_query)
+        await self.filter_handlers.filter_reset_all_callback(callback_query)
     
     async def filter_effect_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора фильтра эффектов"""
@@ -333,8 +360,8 @@ class CallbackHandlers:
         await self.filter_handlers.reset_all_filters(callback_query)
     
     async def daily_asana_callback(self, callback_query: types.CallbackQuery):
-        """Обработчик асаны дня"""
-        await self.filter_handlers.show_daily_asana(callback_query)
+        """Обработчик асаны дня из главного меню"""
+        await self.daily_asana_handlers.daily_asana_command_from_callback(callback_query)
     
     async def _send_long_text_with_image(self, user_id: int, text: str, image_path: str, title: str):
         """Отправляет длинный текст с изображением"""
