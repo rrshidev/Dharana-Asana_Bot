@@ -33,17 +33,30 @@ class YogaBot:
         self.bot = Bot(token=token)
         self.dp = Dispatcher()
         
+        # Инициализация сервисов
+        from src.services.data_service import DataService
+        from src.services.subscription_service import SubscriptionService
+        
+        data_service = DataService()
+        subscription_service = SubscriptionService(db_service)
+        
         # Инициализация обработчиков
         self.command_handlers = CommandHandlers(self.bot)
         self.callback_handlers = CallbackHandlers(self.bot)
         self.message_handlers = MessageHandlers(self.bot)
         
         # Инициализация асаны дня
-        from src.services.data_service import DataService
-        data_service = DataService()
         self.daily_asana_handlers = DailyAsanaHandlers(self.bot, data_service)
         
-        # Передаем daily_asana_handlers в callback_handlers
+        # Инициализация генератора последовательностей
+        from src.handlers.sequence_handlers import SequenceHandlers
+        self.sequence_handlers = SequenceHandlers(self.bot, data_service, subscription_service)
+        
+        # Инициализация обработчиков подписок
+        from src.handlers.subscription_handlers import SubscriptionHandlers
+        self.subscription_handlers = SubscriptionHandlers(self.bot, subscription_service)
+        
+        # Передаем обработчики в callback_handlers
         self.callback_handlers.daily_asana_handlers = self.daily_asana_handlers
         
         # Регистрация обработчиков сразу в конструкторе
@@ -98,6 +111,34 @@ class YogaBot:
         # Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)
         self.dp.message(F.text)(self.handle_text_message)
         logger.info("Daily asana callbacks registered")
+        
+        # Генератор последовательностей
+        self.dp.callback_query(F.data == 'sequence_menu')(self.sequence_handlers.sequence_menu_callback)
+        self.dp.callback_query(F.data == 'sequence_difficulty')(self.sequence_handlers.sequence_difficulty_callback)
+        self.dp.callback_query(F.data.startswith('sequence_set_difficulty_'))(self.sequence_handlers.sequence_set_difficulty_callback)
+        self.dp.callback_query(F.data == 'sequence_duration')(self.sequence_handlers.sequence_duration_callback)
+        self.dp.callback_query(F.data.startswith('sequence_set_duration_'))(self.sequence_handlers.sequence_set_duration_callback)
+        self.dp.callback_query(F.data == 'sequence_focus')(self.sequence_handlers.sequence_focus_callback)
+        self.dp.callback_query(F.data.startswith('sequence_set_focus_'))(self.sequence_handlers.sequence_set_focus_callback)
+        self.dp.callback_query(F.data == 'sequence_generate')(self.sequence_handlers.sequence_generate_callback)
+        self.dp.callback_query(F.data == 'sequence_show')(self.sequence_handlers.sequence_show_callback)
+        self.dp.callback_query(F.data == 'sequence_start')(self.sequence_handlers.sequence_start_callback)
+        # Управление практикой
+        self.dp.callback_query(F.data == 'sequence_pause')(self.sequence_handlers.sequence_pause_callback)
+        self.dp.callback_query(F.data == 'sequence_resume')(self.sequence_handlers.sequence_resume_callback)
+        self.dp.callback_query(F.data == 'sequence_skip')(self.sequence_handlers.sequence_skip_callback)
+        self.dp.callback_query(F.data == 'sequence_stop')(self.sequence_handlers.sequence_stop_callback)
+        self.dp.callback_query(F.data == 'sequence_progress')(self.sequence_handlers.sequence_progress_callback)
+        logger.info("Sequence handlers registered")
+        
+        # Подписки
+        self.dp.callback_query(F.data == 'subscription_plans')(self.subscription_handlers.subscription_plans_callback)
+        self.dp.callback_query(F.data == 'subscription_trial')(self.subscription_handlers.subscription_trial_callback)
+        self.dp.callback_query(F.data == 'subscription_features')(self.subscription_handlers.subscription_features_callback)
+        self.dp.callback_query(F.data == 'subscription_monthly')(self.subscription_handlers.subscription_monthly_callback)
+        self.dp.callback_query(F.data == 'subscription_yearly')(self.subscription_handlers.subscription_yearly_callback)
+        self.dp.callback_query(F.data == 'subscription_status')(self.subscription_handlers.subscription_status_callback)
+        logger.info("Subscription handlers registered")
         
         self.dp.callback_query(F.data == 'back')(self.callback_handlers.back_callback)
         logger.info("Basic callbacks registered")

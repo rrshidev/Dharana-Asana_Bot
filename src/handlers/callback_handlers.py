@@ -6,6 +6,9 @@ from aiogram.types.input_file import FSInputFile
 
 from src.services.data_service import DataService
 from src.services.filter_service import FilterService
+from src.services.video_service import VideoService
+from src.services.subscription_service import SubscriptionService
+from src.services.database_service import db_service
 from src.handlers.filter_handlers import FilterHandlers
 from src.utils.keyboard_service import KeyboardService
 from src.handlers.timer_handlers import TimerHandlers
@@ -20,6 +23,8 @@ class CallbackHandlers:
         self.bot = bot
         self.data_service = DataService()
         self.filter_service = FilterService(self.data_service)
+        self.video_service = VideoService(db_service)
+        self.subscription_service = SubscriptionService(db_service)
         self.keyboard_service = KeyboardService()
         self.filter_handlers = FilterHandlers(bot, self.data_service)
         self.timer_handlers = TimerHandlers(bot, self.data_service, self.keyboard_service)
@@ -236,13 +241,80 @@ class CallbackHandlers:
             )
     
     async def _send_asana_full(self, user_id: int, asana_data, message=None):
-        """Отправляет полное описание асаны с фото"""
+        """Отправляет полное описание асаны с фото или видео"""
         try:
-            await self.bot.send_message(user_id, asana_data.description)
+            # Проверяем статус подписки пользователя
+            subscription_info = self.subscription_service.get_subscription_info(user_id)
+            is_premium = subscription_info['is_active']
             
-            if asana_data.image_path and os.path.exists(asana_data.image_path):
-                await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+            # Ищем видео для этой асаны
+            video = self.video_service.get_video_for_asana(asana_data.name, is_premium)
             
+            # Отладочная информация
+            logger.info(f"Callback User {user_id}: is_premium={is_premium}, video_found={video is not None}")
+            if video:
+                logger.info(f"Callback Video info: is_premium={video['is_premium']}, video_path={video['video_path']}")
+            
+            # Формируем текст с информацией о доступности
+            status_text = ""
+            if video and video['is_premium'] and is_premium:
+                status_text = "🎥 **Видео-инструкция доступна**\n\n"
+            elif video and video['is_premium'] and not is_premium:
+                status_text = "🎥 **Видео-инструкция доступна в премиум-версии**\n\n"
+            
+            # Отправляем описание
+            full_text = status_text + asana_data.description
+            await self.bot.send_message(user_id, full_text)
+            
+            # Отправляем видео или фото
+            if video and video['is_premium'] and is_premium:
+                # Премиум-пользователь получает видео
+                if video['video_path'] and os.path.exists(video['video_path']):
+                    try:
+                        await self.bot.send_video(user_id, FSInputFile(video['video_path']))
+                        logger.info(f"Sent video for asana {asana_data.name} to premium user {user_id}")
+                    except Exception as e:
+                        logger.error(f"Error sending video: {e}")
+                        # Если видео не отправилось, отправляем фото
+                        if asana_data.image_path and os.path.exists(asana_data.image_path):
+                            await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+                else:
+                    # Видео файла нет, отправляем фото
+                    if asana_data.image_path and os.path.exists(asana_data.image_path):
+                        await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+                        
+            elif video and video['is_premium'] and not is_premium:
+                # Бесплатный пользователь видит превью видео и предложение подписки
+                logger.info(f"Callback: Showing subscription offer to user {user_id}")
+                
+                if asana_data.image_path and os.path.exists(asana_data.image_path):
+                    await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+                
+                # Добавляем предложение подписки
+                premium_text = (
+                    "🎯 **Хотите видео-инструкцию?**\n\n"
+                    "В премиум-версии вы получите:\n"
+                    "• 🎥 Детальные видео для 50+ асан\n"
+                    "• 📊 Анализ техники и исправление ошибок\n"
+                    "• 🎵 Аудио-сопровождение практик\n"
+                    "• 🔄 Безлимитные генерации комплексов\n\n"
+                    "Попробуйте 7 дней бесплатно!"
+                )
+                
+                premium_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🚀 7 дней бесплатно", callback_data="subscription_trial")],
+                    [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
+                ])
+                
+                await self.bot.send_message(user_id, premium_text, reply_markup=premium_keyboard)
+                
+            else:
+                # Видео нет, отправляем фото как обычно
+                logger.info(f"Callback: No video found for asana {asana_data.name}, sending photo only")
+                if asana_data.image_path and os.path.exists(asana_data.image_path):
+                    await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+            
+            # Кнопка возврата
             if message:
                 await message.reply('Каталог', reply_markup=self.keyboard_service.create_main_menu())
             else:
@@ -251,6 +323,7 @@ class CallbackHandlers:
                     text='Каталог', 
                     reply_markup=self.keyboard_service.create_main_menu()
                 )
+                
         except Exception as e:
             logger.error(f"Error sending asana {asana_data.name}: {e}")
             await self.bot.send_message(

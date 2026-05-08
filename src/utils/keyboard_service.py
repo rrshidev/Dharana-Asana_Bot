@@ -16,6 +16,7 @@ class KeyboardService:
             [InlineKeyboardButton(text='📈 8 ступеней йоги', callback_data='steps')],
             [InlineKeyboardButton(text='🌅 Асана дня', callback_data='daily_asana')],
             [InlineKeyboardButton(text='🎲 Случайная асана', callback_data='random_asana')],
+            [InlineKeyboardButton(text='🏋️‍♂️ Генератор практики', callback_data='sequence_menu')],
             [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
             [InlineKeyboardButton(text='🔍 Фильтры асан', callback_data='filter_menu')],
             [InlineKeyboardButton(text='ℹ️ О боте', callback_data='about')],
