@@ -12,6 +12,7 @@ class KeyboardService:
         """Создает главное меню бота"""
         buttons = [
             [InlineKeyboardButton(text='📚 Каталог асан', callback_data='catalog')],
+            [InlineKeyboardButton(text='🎬 Готовые комплексы', callback_data='ready_sequences')],
             [InlineKeyboardButton(text='🧘 Основы йоги', callback_data='basics')],
             [InlineKeyboardButton(text='📈 8 ступеней йоги', callback_data='steps')],
             [InlineKeyboardButton(text='🌅 Асана дня', callback_data='daily_asana')],
@@ -21,6 +22,19 @@ class KeyboardService:
             [InlineKeyboardButton(text='🔍 Фильтры асан', callback_data='filter_menu')],
             [InlineKeyboardButton(text='ℹ️ О боте', callback_data='about')],
         ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    @staticmethod
+    def create_ready_sequences_menu(sequences) -> InlineKeyboardMarkup:
+        """Создает меню готовых комплексов"""
+        buttons = []
+        for sequence in sequences:
+            text = sequence['name']
+            callback_data = f'ready_sequence_{sequence["id"]}'
+            buttons.append([InlineKeyboardButton(text=text, callback_data=callback_data)])
+        
+        # Добавляем кнопку возврата
+        buttons.append([InlineKeyboardButton(text='⬅️ Назад', callback_data='main_menu')])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
     @staticmethod

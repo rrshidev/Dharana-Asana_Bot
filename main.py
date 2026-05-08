@@ -15,6 +15,7 @@ from src.handlers.command_handlers import CommandHandlers
 from src.handlers.callback_handlers import CallbackHandlers
 from src.handlers.message_handlers import MessageHandlers
 from src.handlers.daily_asana_handlers import DailyAsanaHandlers
+from src.handlers.ready_sequence_handlers import ReadySequenceHandlers
 from src.services.database_service import db_service
 
 
@@ -44,6 +45,7 @@ class YogaBot:
         self.command_handlers = CommandHandlers(self.bot)
         self.callback_handlers = CallbackHandlers(self.bot)
         self.message_handlers = MessageHandlers(self.bot)
+        self.ready_sequence_handlers = ReadySequenceHandlers(self.bot, subscription_service)
         
         # Инициализация асаны дня
         self.daily_asana_handlers = DailyAsanaHandlers(self.bot, data_service)
@@ -139,6 +141,11 @@ class YogaBot:
         self.dp.callback_query(F.data == 'subscription_yearly')(self.subscription_handlers.subscription_yearly_callback)
         self.dp.callback_query(F.data == 'subscription_status')(self.subscription_handlers.subscription_status_callback)
         logger.info("Subscription handlers registered")
+        
+        # Готовые комплексы
+        self.dp.callback_query(F.data == 'ready_sequences')(self.ready_sequence_handlers.show_ready_sequences_menu)
+        self.dp.callback_query(F.data.startswith('ready_sequence_'))(self.ready_sequence_handlers.show_ready_sequence)
+        logger.info("Ready sequence handlers registered")
         
         self.dp.callback_query(F.data == 'back')(self.callback_handlers.back_callback)
         logger.info("Basic callbacks registered")

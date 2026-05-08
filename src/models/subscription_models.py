@@ -65,6 +65,10 @@ class UserSubscription(Base):
             return False
         return datetime.utcnow() < self.trial_end
     
+    def has_premium_access(self) -> bool:
+        """Проверяет есть ли у пользователя премиум доступ (платная подписка или триал)"""
+        return self.is_subscription_active() or self.is_trial_active()
+    
     def can_generate_sequence(self) -> bool:
         """Проверяет может ли пользователь генерировать последовательность"""
         # Если премиум или активный триал - может

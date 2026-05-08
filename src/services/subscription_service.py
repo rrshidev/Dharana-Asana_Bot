@@ -129,7 +129,7 @@ class SubscriptionService:
         """Получает информацию о подписке пользователя"""
         subscription = self.get_user_subscription(telegram_id)
         
-        is_active = subscription.is_subscription_active()
+        is_active = subscription.has_premium_access()
         is_trial = subscription.is_trial_active()
         
         if is_active:
