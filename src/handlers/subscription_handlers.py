@@ -36,8 +36,7 @@ class SubscriptionHandlers:
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🚀 7 дней бесплатно", callback_data="subscription_trial")],
-            [InlineKeyboardButton(text="📅 1 месяц - 399₽", callback_data="subscription_monthly")],
-            [InlineKeyboardButton(text="📆 1 год - 2990₽", callback_data="subscription_yearly")],
+            [InlineKeyboardButton(text="💳 Оплатить картой (реквизиты + чек)", callback_data="pay_now")],
             [InlineKeyboardButton(text="❓ Подробнее о функциях", callback_data="subscription_features")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]
         ])
@@ -149,17 +148,16 @@ class SubscriptionHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         user_id = callback_query.from_user.id
         
-        # Временно показываем заглушку - пока нет платежной системы
+        # Временно показываем реквизиты и просим прислать чек (мок-оплата)
         text = (
             "💳 **Покупка подписки**\n\n"
-            "📅 **Месячная подписка - 399₽**\n\n"
-            "⚠️ Платежная система в процессе подключения.\n"
-            "Скоро вы сможете оформить подписку прямо в боте!\n\n"
-            "Временный вариант:\n"
-            "Напишите @admin для активации подписки"
+            "📅 **Месячная подписка - 499₽/мес**\n\n"
+            "➡️ Нажмите «Оплатить картой», переведите сумму на указанную карту "
+            "и отправьте фото чека — Premium откроется после проверки."
         )
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💳 Оплатить картой (реквизиты + чек)", callback_data="pay_now")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="subscription_plans")]
         ])
         
@@ -175,18 +173,16 @@ class SubscriptionHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         user_id = callback_query.from_user.id
         
-        # Временно показываем заглушку - пока нет платежной системы
         text = (
             "💳 **Покупка подписки**\n\n"
             "📆 **Годовая подписка - 2990₽**\n"
             "💰 Экономия 1800₽ по сравнению с месячной!\n\n"
-            "⚠️ Платежная система в процессе подключения.\n"
-            "Скоро вы сможете оформить подписку прямо в боте!\n\n"
-            "Временный вариант:\n"
-            "Напишите @admin для активации подписки"
+            "➡️ Нажмите «Оплатить картой», переведите сумму на указанную карту "
+            "и отправьте фото чека — Premium откроется после проверки."
         )
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="💳 Оплатить картой (реквизиты + чек)", callback_data="pay_now")],
             [InlineKeyboardButton(text="🔙 Назад", callback_data="subscription_plans")]
         ])
         

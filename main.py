@@ -16,6 +16,8 @@ from src.handlers.callback_handlers import CallbackHandlers
 from src.handlers.message_handlers import MessageHandlers
 from src.handlers.daily_asana_handlers import DailyAsanaHandlers
 from src.handlers.ready_sequence_handlers import ReadySequenceHandlers
+from src.handlers.admin_handlers import AdminHandlers
+from src.handlers.payment_handlers import PaymentHandlers
 from src.services.database_service import db_service
 
 
@@ -58,6 +60,12 @@ class YogaBot:
         from src.handlers.subscription_handlers import SubscriptionHandlers
         self.subscription_handlers = SubscriptionHandlers(self.bot, subscription_service)
         
+        # Инициализация админ-обработчиков
+        self.admin_handlers = AdminHandlers(self.bot)
+
+        # Инициализация обработчиков оплаты
+        self.payment_handlers = PaymentHandlers(self.bot)
+        
         # Передаем обработчики в callback_handlers
         self.callback_handlers.daily_asana_handlers = self.daily_asana_handlers
         
@@ -75,6 +83,19 @@ class YogaBot:
         self.dp.message(Command('info'))(self.command_handlers.info_command)
         self.dp.message(Command('about_us'))(self.command_handlers.about_us_command)
         self.dp.message(Command('asana_day'))(self.daily_asana_handlers.daily_asana_command)
+        # Админ-команды
+        self.dp.message(Command('adm_hlp'))(self.admin_handlers.adm_hlp)
+        self.dp.message(Command('adm_stats'))(self.admin_handlers.adm_stats)
+        self.dp.message(Command('adm_users'))(self.admin_handlers.adm_users)
+        self.dp.message(Command('adm_search'))(self.admin_handlers.adm_search)
+        self.dp.message(Command('adm_make'))(self.admin_handlers.adm_make)
+        self.dp.message(Command('adm_unmake'))(self.admin_handlers.adm_unmake)
+        self.dp.message(Command('adm_premium'))(self.admin_handlers.adm_premium)
+        self.dp.message(Command('adm_unpremium'))(self.admin_handlers.adm_unpremium)
+        self.dp.message(Command('adm_broadcast'))(self.admin_handlers.adm_broadcast)
+        self.dp.message(Command('adm_btest'))(self.admin_handlers.adm_btest)
+        # Оплата Premium
+        self.dp.message(Command('pay'))(self.payment_handlers.pay_command)
         logger.info("Commands registered")
         
         # Callback запросы
@@ -113,7 +134,14 @@ class YogaBot:
         # Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)
         self.dp.message(F.text)(self.handle_text_message)
         logger.info("Daily asana callbacks registered")
-        
+
+        # Обработчик фото (чек на оплату)
+        self.dp.message(F.photo)(self.payment_handlers.handle_receipt_photo)
+        # Оплата Premium из меню подписки
+        self.dp.callback_query(F.data == 'pay_now')(self.payment_handlers.pay_now_callback)
+        # Подтверждение/отклонение чека админом (под фото)
+        self.dp.callback_query(F.data.startswith('pay_review_'))(self.payment_handlers.review_callback)
+
         # Генератор последовательностей
         self.dp.callback_query(F.data == 'sequence_menu')(self.sequence_handlers.sequence_menu_callback)
         self.dp.callback_query(F.data == 'sequence_difficulty')(self.sequence_handlers.sequence_difficulty_callback)
@@ -229,6 +257,12 @@ class YogaBot:
         for i, step in enumerate(data.steps):
             self.dp.callback_query(F.data == f'step_{i}')(self.callback_handlers.step_item_callback)
         
+        # Рассылки (broadcast)
+        self.dp.callback_query(F.data.startswith('bc_aud_'))(self.admin_handlers.bc_aud_callback)
+        self.dp.callback_query(F.data.startswith('bc_chan_'))(self.admin_handlers.bc_chan_callback)
+        self.dp.callback_query(F.data == 'bc_send')(self.admin_handlers.bc_send_callback)
+        self.dp.callback_query(F.data == 'bc_abort')(self.admin_handlers.bc_abort_callback)
+
         # Универсальный отладочный обработчик - ставим ПОСЛЕ всех остальных
         logger.info("Registering debug callback handler...")
         self.dp.callback_query()(self.debug_callback)
@@ -253,7 +287,19 @@ class YogaBot:
         
         # Запускаем планировщик асаны дня
         asyncio.create_task(self.daily_asana_handlers.start_scheduler())
-        
+
+        # Запускаем обработчик подтверждений оплаты
+        asyncio.create_task(self.payment_handlers.confirmations_loop())
+
+        # Запускаем обработчик новых чеков (отправка фото + кнопок админу)
+        asyncio.create_task(self.payment_handlers.pending_review_loop())
+
+        # Запускаем обработчик отклонений оплаты (сообщение клиенту)
+        asyncio.create_task(self.payment_handlers.rejections_loop())
+
+        # Запускаем доставку Telegram-рассылок
+        asyncio.create_task(self.admin_handlers.broadcast_loop())
+
         await self.dp.start_polling(self.bot, skip_updates=True)
 
     async def handle_text_message(self, message: types.Message):

@@ -19,6 +19,7 @@ class KeyboardService:
             [InlineKeyboardButton(text='🎲 Случайная асана', callback_data='random_asana')],
             [InlineKeyboardButton(text='🏋️‍♂️ Генератор практики', callback_data='sequence_menu')],
             [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
+            [InlineKeyboardButton(text='💎 Премиум-подписка', callback_data='subscription_plans')],
             [InlineKeyboardButton(text='🔍 Фильтры асан', callback_data='filter_menu')],
             [InlineKeyboardButton(text='ℹ️ О боте', callback_data='about')],
         ]

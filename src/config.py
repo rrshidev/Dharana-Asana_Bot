@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # Токен бота
-BOT_TOKEN = os.getenv("BOT_TOKEN", "5837988056:AAF_your_token_here")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
 # База данных
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///bot_data/yoga_bot.db")

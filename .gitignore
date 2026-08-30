@@ -71,3 +71,23 @@ bot_data/
 # Cache
 .cache/
 .pytest_cache/
+
+# Asana media & content (large, not for git)
+videos/
+all_asanas.json
+
+# Deploy scripts & server docs (contain server IPs)
+deploy.sh
+deploy.ps1
+DEPLOY.md
+DEPLOYMENT.md
+Makefile
+setup-server.sh
+
+# Development / analysis scripts (noise for production repo)
+analyze_asanas.py
+bot_new_horizon.py
+check_*.py
+create_*.py
+debug_*.py
+test_*.py

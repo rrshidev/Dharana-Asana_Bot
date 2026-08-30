@@ -1,10 +1,15 @@
 import logging
+import os
+import httpx
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 
 from src.utils.keyboard_service import KeyboardService
 
 logger = logging.getLogger(__name__)
+
+API_URL = os.getenv("API_URL", "http://dharana-api:8000")
 
 
 class CommandHandlers:
@@ -16,6 +21,59 @@ class CommandHandlers:
     
     async def start_command(self, message: types.Message):
         """Обработчик команды /start"""
+        text = message.text or ""
+        payload = text.split(" ", 1)[1] if " " in text else ""
+        telegram_id = message.from_user.id
+        name = message.from_user.first_name or ""
+        username = message.from_user.username or ""
+
+        # Always register/sync user in DB
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{API_URL}/api/v1/auth/telegram/create-code",
+                    json={
+                        "telegram_id": telegram_id,
+                        "name": name,
+                        "username": username,
+                    },
+                    timeout=10,
+                )
+        except Exception as e:
+            logger.error(f"Error registering user: {e}")
+
+        if payload == "auth":
+            # Show the code for app login
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        f"{API_URL}/api/v1/auth/telegram/create-code",
+                        json={
+                            "telegram_id": telegram_id,
+                            "name": name,
+                            "username": username,
+                        },
+                        timeout=10,
+                    )
+                    if resp.status_code == 200:
+                        code = resp.json()["code"]
+                        await message.reply(
+                            f"🔐 Код для входа в приложение Dharana:\n\n"
+                            f"`{code}`\n\n"
+                            f"Введите этот код в приложении для завершения регистрации.",
+                            parse_mode=ParseMode.MARKDOWN,
+                        )
+                        return
+                    else:
+                        logger.error(f"Failed to create telegram code: {resp.text}")
+            except Exception as e:
+                logger.error(f"Error creating telegram code: {e}")
+
+            await message.reply(
+                "Произошла ошибка. Попробуйте позже.",
+            )
+            return
+
         await message.reply(
             "Намаскар!\n"
             "Это YogaBot - энциклопедия йогических асан!\n"
@@ -44,7 +102,8 @@ class CommandHandlers:
             '----> /help - Помощь и информация о функциях ❓❗️\n'
             '----> /what - Что умеет бот 🤖\n'
             '----> /info - Подробная информация об асанах и таймере ❓❗️\n'
-            '----> /about_us - об авторах и реализаторах проекта'
+            '----> /about_us - об авторах и реализаторах проекта\n'
+            '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
         )
         await message.reply(help_text, reply_markup=self.keyboard_service.create_main_menu())
     

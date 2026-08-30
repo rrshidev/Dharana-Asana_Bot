@@ -377,6 +377,7 @@ class CallbackHandlers:
             'Создан с любовью к йоге 🙏',
             reply_markup=self.keyboard_service.create_main_menu()
         )
+
     
     async def filter_menu_callback(self, callback_query: types.CallbackQuery):
         """Обработчик меню фильтров"""
