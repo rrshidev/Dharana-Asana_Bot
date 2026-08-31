@@ -530,31 +530,43 @@ class AdminHandlers:
         state = self._video_state.get(tg_id)
         if not state:
             return
-        if not message.document:
+
+        # Telegram sends video as either message.document or message.video
+        doc = message.document
+        vid = message.video
+        if not doc and not vid:
             await message.reply("Пришлите файл видео (не текст).")
             return
 
-        doc = message.document
-        mime = (doc.mime_type or "").lower()
-        fname = doc.file_name or "video.mp4"
-        if not (mime.startswith("video/") or fname.lower().endswith(
+        if vid:
+            file_id = vid.file_id
+            file_name = vid.file_name or "video.mp4"
+            mime = (vid.mime_type or "").lower()
+        else:
+            file_id = doc.file_id
+            file_name = doc.file_name or "video.mp4"
+            mime = (doc.mime_type or "").lower()
+
+        if not (mime.startswith("video/") or file_name.lower().endswith(
                 (".mp4", ".mov", ".avi", ".mkv", ".webm"))):
             await message.reply(
                 "Это не похоже на видео. Поддерживаются: mp4, mov, avi, mkv, webm.")
             return
 
+        logger.info("video receive from admin %s: name=%s mime=%s", tg_id, file_name, mime)
         reply_msg = await message.reply("⏳ Загружаю видео...")
         try:
-            file = await self.bot.get_file(doc.file_id)
+            file = await self.bot.get_file(file_id)
             downloaded = await self.bot.download_file(file.file_path)
             data = downloaded.read() if not isinstance(downloaded, bytes) else downloaded
+            logger.info("video downloaded: %d bytes", len(data))
         except Exception as e:
-            logger.error("video download error: %s", e)
+            logger.error("video download error: %s", e, exc_info=True)
             self._video_state.pop(tg_id, None)
             return await reply_msg.edit_text("❌ Не удалось скачать видео из Telegram.")
 
         try:
-            files = {"file": (fname, data, mime or "video/mp4")}
+            files = {"file": (file_name, data, mime or "video/mp4")}
             form = {"name": state["name"], "section": state["section"]}
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
@@ -564,8 +576,9 @@ class AdminHandlers:
                     files=files,
                     timeout=300,
                 )
+            logger.info("video upload response: %d %s", resp.status_code, resp.text[:300])
         except Exception as e:
-            logger.error("video upload error: %s", e)
+            logger.error("video upload error: %s", e, exc_info=True)
             self._video_state.pop(tg_id, None)
             return await reply_msg.edit_text("❌ Ошибка загрузки на сервер. Попробуйте позже.")
 
