@@ -94,6 +94,9 @@ class YogaBot:
         self.dp.message(Command('adm_unpremium'))(self.admin_handlers.adm_unpremium)
         self.dp.message(Command('adm_broadcast'))(self.admin_handlers.adm_broadcast)
         self.dp.message(Command('adm_btest'))(self.admin_handlers.adm_btest)
+        self.dp.message(Command('adm_addvideo'))(self.admin_handlers.adm_addvideo)
+        # Видеофайл для добавления готового комплекса
+        self.dp.message(F.document)(self.admin_handlers.handle_video_document)
         # Оплата Premium
         self.dp.message(Command('pay'))(self.payment_handlers.pay_command)
         logger.info("Commands registered")

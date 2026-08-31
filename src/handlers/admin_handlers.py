@@ -22,8 +22,10 @@ _ADM_HELP = (
     "/adm_premium &lt;telegram_id|@username&gt; [дней] - выдать премиум (по умолч. 30)\n"
     "/adm_unpremium &lt;telegram_id|@username&gt; - снять премиум\n"
     "/adm_broadcast &lt;текст&gt; - рассылка (аудитория + каналы на выбор)\n"
-    "/adm_btest &lt;текст&gt; - тестовая рассылка только админу\n\n"
-    "Пример: <code>/adm_make 123456789</code>, <code>/adm_premium @username 30</code>"
+    "/adm_btest &lt;текст&gt; - тестовая рассылка только админу\n"
+    "/adm_addvideo &lt;free|premium&gt; &lt;название&gt; - добавить видео готового комплекса\n\n"
+    "Пример: <code>/adm_make 123456789</code>, <code>/adm_premium @username 30</code>, "
+    "<code>/adm_addvideo free Утренний комплекс</code>"
 )
 
 
@@ -489,6 +491,107 @@ class AdminHandlers:
             "Telegram: " + tg_res + "\nПриложение: " + app_res,
             parse_mode=ParseMode.HTML,
         )
+
+    # ---------- Добавление видео готового комплекса ----------
+    _video_state = {}
+
+    async def adm_addvideo(self, message: types.Message):
+        if not await self._check_admin(message.from_user.id):
+            return await self._deny(message)
+        text = (message.text or "").strip()
+        parts = text.split(" ", 2)
+        if len(parts) < 3:
+            return await message.reply(
+                "🎬 <b>Добавление видео комплекса</b>\n\n"
+                "Формат: <code>/adm_addvideo &lt;free|premium&gt; Название комплекса</code>\n\n"
+                "Пример: <code>/adm_addvideo free Утренний комплекс</code>\n\n"
+                "После этого пришлите видеофайл (mp4, mov, avi, mkv, webm).",
+                parse_mode=ParseMode.HTML,
+            )
+        section = parts[1].strip().lower()
+        if section not in ("free", "premium"):
+            return await message.reply(
+                "Раздел должен быть <code>free</code> или <code>premium</code>.",
+                parse_mode=ParseMode.HTML,
+            )
+        name = parts[2].strip()
+        if not name:
+            return await message.reply("Укажите название комплекса.")
+        self._video_state[message.from_user.id] = {"section": section, "name": name}
+        await message.reply(
+            f"🎬 Отправьте видеофайл для комплекса <b>{name}</b> "
+            f"(раздел: <b>{'Premium' if section == 'premium' else 'Бесплатные'}</b>).\n\n"
+            "Поддерживаются: mp4, mov, avi, mkv, webm.",
+            parse_mode=ParseMode.HTML,
+        )
+
+    async def handle_video_document(self, message: types.Message):
+        tg_id = message.from_user.id
+        state = self._video_state.get(tg_id)
+        if not state:
+            return
+        if not message.document:
+            await message.reply("Пришлите файл видео (не текст).")
+            return
+
+        doc = message.document
+        mime = (doc.mime_type or "").lower()
+        fname = doc.file_name or "video.mp4"
+        if not (mime.startswith("video/") or fname.lower().endswith(
+                (".mp4", ".mov", ".avi", ".mkv", ".webm"))):
+            await message.reply(
+                "Это не похоже на видео. Поддерживаются: mp4, mov, avi, mkv, webm.")
+            return
+
+        reply_msg = await message.reply("⏳ Загружаю видео...")
+        try:
+            file = await self.bot.get_file(doc.file_id)
+            downloaded = await self.bot.download_file(file.file_path)
+            data = downloaded.read() if not isinstance(downloaded, bytes) else downloaded
+        except Exception as e:
+            logger.error("video download error: %s", e)
+            self._video_state.pop(tg_id, None)
+            return await reply_msg.edit_text("❌ Не удалось скачать видео из Telegram.")
+
+        try:
+            files = {"file": (fname, data, mime or "video/mp4")}
+            form = {"name": state["name"], "section": state["section"]}
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{API_URL}/api/v1/admin-bot/sequences/add-video",
+                    headers=self._headers(),
+                    data=form,
+                    files=files,
+                    timeout=300,
+                )
+        except Exception as e:
+            logger.error("video upload error: %s", e)
+            self._video_state.pop(tg_id, None)
+            return await reply_msg.edit_text("❌ Ошибка загрузки на сервер. Попробуйте позже.")
+
+        self._video_state.pop(tg_id, None)
+
+        if resp.status_code in (200, 201):
+            return await reply_msg.edit_text(
+                "✅ Видео добавлено в раздел "
+                f"{'Premium' if state['section'] == 'premium' else 'бесплатные'}:\n"
+                f"<b>{state['name']}</b>",
+                parse_mode=ParseMode.HTML,
+            )
+        if resp.status_code == 409:
+            return await reply_msg.edit_text(
+                f"⚠️ Комплекс <b>{state['name']}</b> уже существует в этом разделе.\n"
+                "Повторите команду с другим названием — "
+                "<code>/adm_addvideo &lt;free|premium&gt; Новое название</code>",
+                parse_mode=ParseMode.HTML,
+            )
+        detail = ""
+        try:
+            detail = resp.json().get("detail", "")
+        except Exception:
+            pass
+        return await reply_msg.edit_text(
+            f"❌ Ошибка ({resp.status_code}). {detail}")
 
     # ---------- Broadcast loop (доставка Telegram из очереди) ----------
     async def broadcast_loop(self):

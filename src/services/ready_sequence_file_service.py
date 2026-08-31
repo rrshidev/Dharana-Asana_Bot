@@ -8,7 +8,9 @@ class ReadySequenceFileService:
     """Сервис для работы с готовыми комплексами на основе файлов"""
     
     def __init__(self):
-        self.sequences_dir = "videos/ready_sequences"
+        # Root catalog; on deploy point SEQUENCES_DIR at the shared volume
+        # (e.g. /media/sequences) shared with the backend.
+        self.sequences_dir = os.getenv("SEQUENCES_DIR", "videos/ready_sequences")
         self.premium_dir = os.path.join(self.sequences_dir, "premium")
         self.free_dir = os.path.join(self.sequences_dir, "free")
         
