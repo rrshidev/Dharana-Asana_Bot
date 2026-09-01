@@ -77,24 +77,16 @@ class ReadySequenceHandlers:
             subscription_info = self.subscription_service.get_subscription_info(user_id)
             is_premium = subscription_info['is_active']
             
-            # Формируем текст с информацией о доступности
-            status_text = ""
+            # Краткая информация о доступности (без вымышленных метаданных)
             if sequence['is_premium'] and is_premium:
-                status_text = "🎥 **Видео-инструкция доступна**\n\n"
+                status_text = "⭐ Комплекс доступен в премиум-версии\n\n"
             elif sequence['is_premium'] and not is_premium:
-                status_text = "🎥 **Видео-инструкция доступна в премиум-версии**\n\n"
+                status_text = "🎥 **Видео доступно в премиум-версии**\n\n"
             else:
-                status_text = "🎥 **Видео-инструкция доступна**\n\n"
+                status_text = "🎥 **Видео доступно**\n\n"
             
-            # Формируем полное описание
-            full_text = status_text
-            full_text += f"🎬 **{sequence['name']}**\n\n"
-            full_text += f"⏱️ Длительность: {sequence['duration']} минут\n"
-            full_text += f"📊 Сложность: {'⭐' * sequence['difficulty_level']}\n"
-            full_text += f"🏷️ Категория: {sequence['category']}\n"
-            full_text += f"🎯 Фокус: {sequence['focus_areas']}\n\n"
-            full_text += f"📝 **Описание:**\n{sequence['description']}\n\n"
-            full_text += f"👨‍🏫 Инструктор: {sequence['instructor_name']}"
+            full_text = f"🎬 **{sequence['name']}**\n\n"
+            full_text += status_text
             
             await self.bot.send_message(user_id, full_text)
             
