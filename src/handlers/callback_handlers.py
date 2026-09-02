@@ -1,6 +1,7 @@
 import logging
 import os
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import FSInputFile
 
@@ -416,12 +417,14 @@ class CallbackHandlers:
                 chat_id=user_id,
                 message_id=message_id,
                 text=main_menu_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
         else:
             await self.bot.send_message(
                 chat_id=user_id,
                 text=main_menu_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
 
@@ -442,12 +445,14 @@ class CallbackHandlers:
                 chat_id=user_id,
                 message_id=message_id,
                 text=start_screen_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
         else:
             await self.bot.send_message(
                 chat_id=user_id,
                 text=start_screen_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
     

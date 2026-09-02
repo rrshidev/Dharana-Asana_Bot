@@ -88,7 +88,11 @@ class CommandHandlers:
             "Выбери действие ниже и начнём практику!"
         )
 
-        await message.reply(welcome_text, reply_markup=self.keyboard_service.create_start_menu())
+        await message.reply(
+            welcome_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_start_menu(),
+        )
     
     async def help_command(self, message: types.Message):
         """Обработчик команды /help"""
