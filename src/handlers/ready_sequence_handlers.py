@@ -27,8 +27,8 @@ class ReadySequenceHandlers:
                 await self.bot.send_message(
                     callback.from_user.id,
                     "🎬 *Готовые комплексы*\n\n"
-                    "Пока нет доступных комплексов. "
-                    "Добавьте видео файлы в папку `videos/ready_sequences/`",
+                    "Пока здесь нет готовых комплексов. "
+                    "Загляните позже — мы добавляем новые практики!",
                     reply_markup=self.keyboard_service.create_main_menu()
                 )
                 await callback.answer()
@@ -120,7 +120,11 @@ class ReadySequenceHandlers:
                     await self.bot.send_message(user_id, premium_text, reply_markup=premium_keyboard)
             else:
                 # Видео файл не найден
-                await self.bot.send_message(user_id, "Видео файл не найден. Проверьте наличие файла в папке.")
+                await self.bot.send_message(
+                    user_id,
+                    "😔 К сожалению, это видео временно недоступно. "
+                    "Попробуйте позже.",
+                )
             
             # Кнопка возврата
             sequences = self.ready_sequence_service.get_all_sequences()
