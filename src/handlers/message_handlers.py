@@ -1,6 +1,7 @@
 import logging
 import os
 from aiogram import types
+from aiogram.enums import ParseMode
 
 from src.services.data_service import DataService
 from src.services.video_service import VideoService
@@ -60,7 +61,7 @@ class MessageHandlers:
             
             # Отправляем описание
             full_text = status_text + asana_data.description
-            await self.bot.send_message(message.from_user.id, full_text)
+            await self.bot.send_message(message.from_user.id, full_text, parse_mode=ParseMode.MARKDOWN)
             
             # Отправляем видео или фото
             if video and video['is_premium'] and is_premium:
@@ -107,7 +108,7 @@ class MessageHandlers:
                     [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
                 ])
                 
-                await self.bot.send_message(message.from_user.id, premium_text, reply_markup=premium_keyboard)
+                await self.bot.send_message(message.from_user.id, premium_text, parse_mode=ParseMode.MARKDOWN, reply_markup=premium_keyboard)
                 
             else:
                 # Видео нет, отправляем фото как обычно

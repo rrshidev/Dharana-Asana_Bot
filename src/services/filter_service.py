@@ -3,6 +3,7 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from aiogram import Bot
+from aiogram.enums import ParseMode
 
 from src.models.data_models import AsanaData, AsanaDifficulty, AsanaEffect, UserPreferences
 from src.services.data_service import DataService
@@ -223,7 +224,8 @@ class AsanaDayNotifier:
                         {"text": "📚 Все асаны", "callback_data": "catalog"},
                         {"text": "🎲 Другая асана", "callback_data": "random_asana"}
                     ]]
-                }
+                },
+                parse_mode=ParseMode.MARKDOWN
             )
             
             self.notified_users.add(user_id)

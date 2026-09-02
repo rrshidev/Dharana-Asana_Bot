@@ -2,6 +2,7 @@ import logging
 import asyncio
 import re
 from aiogram import types, F
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.services.timer_service import timer_service
@@ -39,7 +40,8 @@ class TimerHandlers:
             "🧘 Медитация - простая практика осознанности\n"
             "🧘‍♂️ Асана - практика поз с чередованием работы/отдыха\n"
             "🌬️ Пранаяма - дыхательные упражнения",
-            reply_markup=TimerUI.get_main_menu()
+            reply_markup=TimerUI.get_main_menu(),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     # Медитация
@@ -52,7 +54,8 @@ class TimerHandlers:
             message_id=callback_query.message.message_id,
             text="🧘 **Медитация**\n\n"
             "Выбери длительность практики:",
-            reply_markup=TimerUI.get_meditation_menu()
+            reply_markup=TimerUI.get_meditation_menu(),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def meditation_start_callback(self, callback_query: types.CallbackQuery):
@@ -102,7 +105,8 @@ class TimerHandlers:
                 inline_keyboard=[
                     [InlineKeyboardButton(text="🔙 Назад", callback_data="timer_meditation")]
                 ]
-            )
+            ),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def handle_meditation_time_input(self, message: types.Message):
@@ -144,7 +148,8 @@ class TimerHandlers:
             notification_message = await message.answer(
                 f"🔔 **Медитация началась!**\n\n"
                 f"Длительность: {minutes} минут\n"
-                "Сосредоточься на дыхании... 🧘"
+                "Сосредоточься на дыхании... 🧘",
+                parse_mode=ParseMode.MARKDOWN
             )
             asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 5))
             return
@@ -172,7 +177,8 @@ class TimerHandlers:
         notification_message = await message.answer(
             f"🔔 **Медитация началась!**\n\n"
             f"Длительность: {minutes} минут\n"
-            "Сосредоточься на дыхании... 🧘"
+            "Сосредоточься на дыхании... 🧘",
+            parse_mode=ParseMode.MARKDOWN
         )
         asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 5))
     async def asana_callback(self, callback_query: types.CallbackQuery):
@@ -201,7 +207,8 @@ class TimerHandlers:
             f"⏸️ Отдых: {rest_text}\n"
             f"🔄 Циклы: {config.cycles}\n\n"
             "Настрой параметры или начни практику:",
-            reply_markup=TimerUI.get_asana_config_menu()
+            reply_markup=TimerUI.get_asana_config_menu(),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def asana_config_callback(self, callback_query: types.CallbackQuery):
@@ -222,7 +229,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="⏱️ **Выбери время работы:**",
-            reply_markup=TimerUI.get_work_duration_menu(current_duration)
+            reply_markup=TimerUI.get_work_duration_menu(current_duration),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def asana_config_rest_callback(self, callback_query: types.CallbackQuery):
@@ -238,7 +246,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="⏸️ **Выбери время отдыха:**",
-            reply_markup=TimerUI.get_rest_duration_menu(current_duration)
+            reply_markup=TimerUI.get_rest_duration_menu(current_duration),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def asana_config_cycles_callback(self, callback_query: types.CallbackQuery):
@@ -254,7 +263,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="🔄 **Выбери количество циклов:**",
-            reply_markup=TimerUI.get_cycles_menu(current_cycles)
+            reply_markup=TimerUI.get_cycles_menu(current_cycles),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def asana_work_callback(self, callback_query: types.CallbackQuery):
@@ -351,7 +361,8 @@ class TimerHandlers:
             f"⏸️ Отдых: {rest_text}\n"
             f"🔄 Циклы: {session.cycles}\n\n"
             "Начинаем с первого подхода! 💪",
-            reply_markup=TimerUI.get_control_keyboard(session)
+            reply_markup=TimerUI.get_control_keyboard(session),
+            parse_mode=ParseMode.MARKDOWN
         )
         
         # Сохраняем ID сообщения для редактирования
@@ -384,7 +395,8 @@ class TimerHandlers:
             f"⏱️ Время упражнения: {exercise_text}\n"
             f"⏸️ Время отдыха: {rest_text}\n\n"
             "Настрой параметры или начни практику:",
-            reply_markup=TimerUI.get_pranayama_menu()
+            reply_markup=TimerUI.get_pranayama_menu(),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def pranayama_config_callback(self, callback_query: types.CallbackQuery):
@@ -404,7 +416,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="📊 **Выбери количество упражнений:**",
-            reply_markup=TimerUI.get_pranayama_exercises_menu(current_exercises)
+            reply_markup=TimerUI.get_pranayama_exercises_menu(current_exercises),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def pranayama_exercise_time_callback(self, callback_query: types.CallbackQuery):
@@ -419,7 +432,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="⏱️ **Выбери время упражнения:**",
-            reply_markup=TimerUI.get_pranayama_exercise_time_menu(current_time)
+            reply_markup=TimerUI.get_pranayama_exercise_time_menu(current_time),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def pranayama_rest_time_callback(self, callback_query: types.CallbackQuery):
@@ -434,7 +448,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="⏸️ **Выбери время отдыха:**",
-            reply_markup=TimerUI.get_pranayama_rest_time_menu(current_time)
+            reply_markup=TimerUI.get_pranayama_rest_time_menu(current_time),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def pranayama_exercises_select_callback(self, callback_query: types.CallbackQuery):
@@ -547,7 +562,8 @@ class TimerHandlers:
             f"⏱️ Время упражнения: {exercise_text}\n"
             f"⏸️ Время отдыха: {rest_text}\n\n"
             "Начинаем с первого упражнения! 🧘‍♂️",
-            reply_markup=TimerUI.get_control_keyboard(session)
+            reply_markup=TimerUI.get_control_keyboard(session),
+            parse_mode=ParseMode.MARKDOWN
         )
         
         # Сохраняем ID сообщения для редактирования
@@ -590,7 +606,8 @@ class TimerHandlers:
                     "⏹️ **Таймер остановлен**\n\n"
                     "Практика завершена. Хорошая работа! 🙏\n\n"
                     "Хочешь начать новую практику?",
-                    reply_markup=TimerUI.get_main_menu()
+                    reply_markup=TimerUI.get_main_menu(),
+                    parse_mode=ParseMode.MARKDOWN
                 )
         
         elif action == "reset":
@@ -618,7 +635,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="🔙 **Возвращаю в главное меню таймера...**",
-            reply_markup=TimerUI.get_main_menu()
+            reply_markup=TimerUI.get_main_menu(),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def timer_exit_callback(self, callback_query: types.CallbackQuery):
@@ -633,7 +651,8 @@ class TimerHandlers:
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
             text="🔙 **Выход из таймера...**",
-            reply_markup=self.keyboard_service.create_main_menu()
+            reply_markup=self.keyboard_service.create_main_menu(),
+            parse_mode=ParseMode.MARKDOWN
         )
     
     async def update_timer_message(self, user_id: int, session):
@@ -646,7 +665,8 @@ class TimerHandlers:
                 chat_id=user_id,
                 message_id=timer_messages[user_id],
                 text=TimerUI.format_timer_message(session),
-                reply_markup=TimerUI.get_control_keyboard(session)
+                reply_markup=TimerUI.get_control_keyboard(session),
+                parse_mode=ParseMode.MARKDOWN
             )
         except Exception as e:
             logger.error(f"Error updating timer message: {e}")
@@ -689,7 +709,8 @@ class TimerHandlers:
                                             chat_id=user_id,
                                             message_id=timer_messages[user_id],
                                             text=TimerUI.format_timer_message(updated_session),
-                                            reply_markup=TimerUI.get_main_menu()
+                                            reply_markup=TimerUI.get_main_menu(),
+                                            parse_mode=ParseMode.MARKDOWN
                                         )
                                     except:
                                         pass
@@ -703,7 +724,8 @@ class TimerHandlers:
                                 notification_message = await self.bot.send_message(
                                     user_id,
                                     TimerUI.get_phase_notification(updated_session),
-                                    reply_markup=TimerUI.get_control_keyboard(updated_session)
+                                    reply_markup=TimerUI.get_control_keyboard(updated_session),
+                                    parse_mode=ParseMode.MARKDOWN
                                 )
                                 # Удаляем уведомление через 5 секунд
                                 asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 5))

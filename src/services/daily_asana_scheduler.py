@@ -170,7 +170,8 @@ class DailyAsanaScheduler:
                         chat_id=user_id,
                         photo=input_file,
                         caption=text,
-                        reply_markup=keyboard
+                        reply_markup=keyboard,
+                        parse_mode=ParseMode.MARKDOWN
                     )
                     return
             
@@ -178,7 +179,8 @@ class DailyAsanaScheduler:
             await self.bot.send_message(
                 chat_id=user_id,
                 text=text,
-                reply_markup=keyboard
+                reply_markup=keyboard,
+                parse_mode=ParseMode.MARKDOWN
             )
             
         except Exception as e:
@@ -188,7 +190,8 @@ class DailyAsanaScheduler:
                 await self.bot.send_message(
                     chat_id=user_id,
                     text=text,
-                    reply_markup=keyboard
+                    reply_markup=keyboard,
+                    parse_mode=ParseMode.MARKDOWN
                 )
             except Exception as e2:
                 logger.error(f"Error sending fallback message: {e2}")

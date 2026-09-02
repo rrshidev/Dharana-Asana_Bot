@@ -2,6 +2,7 @@ import logging
 import os
 from typing import List
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from src.services.data_service import DataService
@@ -261,6 +262,7 @@ class FilterHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=filter_menu_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=filter_keyboard
         )
     
@@ -279,6 +281,7 @@ class FilterHandlers:
             message_id=callback_query.message.message_id,
             text="⭐ **Выберите сложность асан:**\n\n"
                    "Фильтр покажет только асаны выбранного уровня сложности.",
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=self.filter_service.get_difficulty_filter_keyboard(current_difficulty)
         )
     
@@ -297,6 +300,7 @@ class FilterHandlers:
             message_id=callback_query.message.message_id,
             text="🎯 **Выберите желаемый эффект:**\n\n"
                    "Фильтр покажет асаны, которые помогают достичь выбранного результата.",
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=self.filter_service.get_effect_filter_keyboard(current_effects)
         )
     
@@ -348,12 +352,14 @@ class FilterHandlers:
                     chat_id=user_id,
                     photo=image_path,
                     caption=asana_text,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup=self.keyboard_service.create_main_menu()
                 )
             else:
                 await self.bot.send_message(
                     chat_id=user_id,
                     text=asana_text,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup=self.keyboard_service.create_main_menu()
                 )
         except Exception as e:
@@ -361,6 +367,7 @@ class FilterHandlers:
             await self.bot.send_message(
                 chat_id=user_id,
                 text=asana_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=self.keyboard_service.create_main_menu()
             )
     
@@ -447,12 +454,14 @@ class FilterHandlers:
                         chat_id=user_id,
                         photo=input_file,
                         caption=asana_text,
+                        parse_mode=ParseMode.MARKDOWN,
                         reply_markup=self.keyboard_service.create_back_to_filters_menu()
                     )
                 else:
                     await self.bot.send_message(
                         chat_id=user_id,
                         text=asana_text,
+                        parse_mode=ParseMode.MARKDOWN,
                         reply_markup=self.keyboard_service.create_back_to_filters_menu()
                     )
             except Exception as e:
@@ -460,6 +469,7 @@ class FilterHandlers:
                 await self.bot.send_message(
                     chat_id=user_id,
                     text=asana_text,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup=self.keyboard_service.create_back_to_filters_menu()
                 )
                 

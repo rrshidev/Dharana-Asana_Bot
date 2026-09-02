@@ -265,7 +265,7 @@ class CallbackHandlers:
             
             # Отправляем описание
             full_text = status_text + asana_data.description
-            await self.bot.send_message(user_id, full_text)
+            await self.bot.send_message(user_id, full_text, parse_mode=ParseMode.MARKDOWN)
             
             # Отправляем видео или фото
             if video and video['is_premium'] and is_premium:
@@ -307,7 +307,7 @@ class CallbackHandlers:
                     [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
                 ])
                 
-                await self.bot.send_message(user_id, premium_text, reply_markup=premium_keyboard)
+                await self.bot.send_message(user_id, premium_text, parse_mode=ParseMode.MARKDOWN, reply_markup=premium_keyboard)
                 
             else:
                 # Видео нет, отправляем фото как обычно

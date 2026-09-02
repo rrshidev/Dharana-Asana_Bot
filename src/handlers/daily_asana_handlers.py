@@ -1,6 +1,7 @@
 import logging
 from datetime import time
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.services.database_service import db_service
@@ -58,6 +59,7 @@ class DailyAsanaHandlers:
             
             await message.answer(
                 settings_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
     
@@ -104,6 +106,7 @@ class DailyAsanaHandlers:
                 chat_id=user_id,
                 message_id=message_id,
                 text=welcome_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
         else:
@@ -111,6 +114,7 @@ class DailyAsanaHandlers:
             await self.bot.send_message(
                 chat_id=user_id,
                 text=welcome_text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
     
@@ -143,6 +147,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=settings_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -215,7 +220,8 @@ class DailyAsanaHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text=confirmation_text
+                text=confirmation_text,
+                parse_mode=ParseMode.MARKDOWN
             )
             
             # Отправляем первую асану дня
@@ -277,6 +283,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=timezone_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -426,6 +433,7 @@ class DailyAsanaHandlers:
         await self.bot.send_message(
             chat_id=user_id,
             text=practice_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup={"inline_keyboard": keyboard}
         )
     
@@ -484,6 +492,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=rest_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup={"inline_keyboard": keyboard}
         )
     
@@ -539,6 +548,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=cycles_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup={"inline_keyboard": keyboard}
         )
     
@@ -598,6 +608,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=message_id,
             text=start_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup={"inline_keyboard": keyboard}
         )
         
@@ -630,6 +641,7 @@ class DailyAsanaHandlers:
             f"⏸️ Отдых: {rest_text}\n"
             f"🔄 Циклы: {cycles_text}\n\n"
             "Начинаем с первого подхода! 💪",
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=TimerUI.get_control_keyboard(session)
         )
         
@@ -700,6 +712,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -811,6 +824,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=manual_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
         
@@ -841,6 +855,7 @@ class DailyAsanaHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=manual_text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
         
@@ -892,6 +907,7 @@ class DailyAsanaHandlers:
                 
                 await message.answer(
                     confirmation_text,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup={"inline_keyboard": [[
                         {"text": "🕐 Получить асану дня", "callback_data": "daily_asana_now"},
                         {"text": "🔙 В главное меню", "callback_data": "main_menu"}

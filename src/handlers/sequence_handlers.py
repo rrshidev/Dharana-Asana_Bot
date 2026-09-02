@@ -1,4 +1,5 @@
 from aiogram import types, Bot, Dispatcher
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import logging
 
@@ -46,6 +47,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -80,6 +82,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -116,6 +119,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -149,6 +153,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -185,6 +190,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -222,6 +228,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -262,6 +269,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -301,6 +309,7 @@ class SequenceHandlers:
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
                 text=text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
             return
@@ -369,6 +378,7 @@ class SequenceHandlers:
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
                 text=text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
             
@@ -483,6 +493,7 @@ class SequenceHandlers:
                     chat_id=user_id,
                     message_id=message_id,
                     text=text,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup=keyboard
                 )
         else:
@@ -490,6 +501,7 @@ class SequenceHandlers:
                 chat_id=user_id,
                 message_id=message_id,
                 text=text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
     
@@ -563,6 +575,7 @@ class SequenceHandlers:
                     chat_id=user_id,
                     message_id=message_id,
                     text=text,
+                    parse_mode=ParseMode.MARKDOWN,
                     reply_markup=keyboard
                 )
         else:
@@ -570,6 +583,7 @@ class SequenceHandlers:
                 chat_id=user_id,
                 message_id=message_id,
                 text=text,
+                parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
     
@@ -597,6 +611,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
         
@@ -624,6 +639,7 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -661,5 +677,6 @@ class SequenceHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )

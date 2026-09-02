@@ -1,4 +1,5 @@
 from aiogram import types, Bot
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import logging
 
@@ -45,6 +46,7 @@ class SubscriptionHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -98,6 +100,7 @@ class SubscriptionHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -140,6 +143,7 @@ class SubscriptionHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -165,6 +169,7 @@ class SubscriptionHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
     
@@ -190,9 +195,9 @@ class SubscriptionHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )
-    
     async def subscription_status_callback(self, callback_query: types.CallbackQuery):
         """Показывает статус подписки пользователя"""
         await self.bot.answer_callback_query(callback_query.id)
@@ -237,5 +242,6 @@ class SubscriptionHandlers:
             chat_id=user_id,
             message_id=callback_query.message.message_id,
             text=text,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=keyboard
         )

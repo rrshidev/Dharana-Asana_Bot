@@ -115,7 +115,7 @@ class CommandHandlers:
             '----> /about_us - об авторах и реализаторах проекта\n'
             '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
         )
-        await message.reply(help_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(help_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
     
     async def what_command(self, message: types.Message):
         """Обработчик команды /what"""
@@ -136,7 +136,7 @@ class CommandHandlers:
             '🌬️ **Пранаяма** - таймер для дыхательных упражнений с индивидуальным временем для каждого упражнения\n\n'
             'Все таймеры имеют удобное управление (пауза, стоп, сброс) и автоматическое обновление прогресса!'
         )
-        await message.reply(what_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(what_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
     
     async def info_command(self, message: types.Message):
         """Обработчик команды /info"""
@@ -169,7 +169,7 @@ class CommandHandlers:
             'Рекомеднуется осваивать этот раздел йоги с опытным наставником. '
             'Обязательно выполняйте разминку перед началом практики.'
         )
-        await message.reply(info_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(info_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
     
     async def about_us_command(self, message: types.Message):
         """Обработчик команды /about_us"""

@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List, Optional
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.models.sequence_models import PracticeSequence, SequenceItem
@@ -169,7 +170,8 @@ class SequencePracticeService:
                             media=photo,
                             caption=text
                         ),
-                        reply_markup=keyboard
+                        reply_markup=keyboard,
+                        parse_mode=ParseMode.MARKDOWN
                     )
             except Exception as e:
                 logger.error(f"Error sending image for asana {current_asana.asana_name}: {e}")
@@ -179,7 +181,8 @@ class SequencePracticeService:
                     chat_id=user_id,
                     message_id=message_id,
                     text=text,
-                    reply_markup=keyboard
+                    reply_markup=keyboard,
+                    parse_mode=ParseMode.MARKDOWN
                 )
         else:
             keyboard = self._create_practice_keyboard(user_id)
@@ -187,7 +190,8 @@ class SequencePracticeService:
                 chat_id=user_id,
                 message_id=message_id,
                 text=text,
-                reply_markup=keyboard
+                reply_markup=keyboard,
+                parse_mode=ParseMode.MARKDOWN
             )
         
         # Автоматически запускаем таймер для следующей асаны
@@ -217,7 +221,8 @@ class SequencePracticeService:
             chat_id=user_id,
             message_id=message_id,
             text=text,
-            reply_markup=keyboard
+            reply_markup=keyboard,
+            parse_mode=ParseMode.MARKDOWN
         )
         
         # Останавливаем последовательность
@@ -241,7 +246,8 @@ class SequencePracticeService:
             chat_id=user_id,
             message_id=message_id,
             text=text,
-            reply_markup=keyboard
+            reply_markup=keyboard,
+            parse_mode=ParseMode.MARKDOWN
         )
     
     def _create_practice_keyboard(self, user_id: int) -> InlineKeyboardMarkup:

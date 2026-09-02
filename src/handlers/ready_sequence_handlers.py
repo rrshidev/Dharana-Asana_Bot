@@ -1,6 +1,7 @@
 import os
 import logging
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.services.subscription_service import SubscriptionService
@@ -88,7 +89,7 @@ class ReadySequenceHandlers:
             full_text = f"🎬 **{sequence['name']}**\n\n"
             full_text += status_text
             
-            await self.bot.send_message(user_id, full_text)
+            await self.bot.send_message(user_id, full_text, parse_mode=ParseMode.MARKDOWN)
             
             # Обрабатываем видео
             if sequence['video_path'] and os.path.exists(sequence['video_path']):
@@ -117,7 +118,7 @@ class ReadySequenceHandlers:
                         [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
                     ])
                     
-                    await self.bot.send_message(user_id, premium_text, reply_markup=premium_keyboard)
+                    await self.bot.send_message(user_id, premium_text, parse_mode=ParseMode.MARKDOWN, reply_markup=premium_keyboard)
             else:
                 # Видео файл не найден
                 await self.bot.send_message(
