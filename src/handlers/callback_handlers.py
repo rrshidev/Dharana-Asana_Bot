@@ -394,19 +394,23 @@ class CallbackHandlers:
     async def main_menu_callback(self, callback_query: types.CallbackQuery):
         """Обработчик возврата в главное меню"""
         await self.show_main_menu(callback_query.from_user.id, callback_query.message.message_id)
-    
+
+    async def start_screen_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик возврата на главный экран (быстрые действия)"""
+        await self.show_start_screen(callback_query.from_user.id, callback_query.message.message_id)
+
     async def show_main_menu(self, user_id: int, message_id: int = None):
-        """Показать главное меню"""
+        """Показать главное меню (все разделы)"""
         from src.utils.keyboard_service import KeyboardService
         keyboard_service = KeyboardService()
-        
+
         main_menu_text = (
-            "🧘‍♂️ **Добро пожаловать в Йога Бот!**\n\n"
-            "Выберите раздел:"
+            "🧘‍♂️ **Каталог и разделы**\n\n"
+            "Здесь всё, что поможет в практике. Выбери раздел:"
         )
-        
+
         keyboard = keyboard_service.create_main_menu()
-        
+
         if message_id:
             await self.bot.edit_message_text(
                 chat_id=user_id,
@@ -418,6 +422,32 @@ class CallbackHandlers:
             await self.bot.send_message(
                 chat_id=user_id,
                 text=main_menu_text,
+                reply_markup=keyboard
+            )
+
+    async def show_start_screen(self, user_id: int, message_id: int = None):
+        """Показать главный экран (быстрые действия)"""
+        from src.utils.keyboard_service import KeyboardService
+        keyboard_service = KeyboardService()
+
+        start_screen_text = (
+            "🏠 **Главный экран**\n\n"
+            "Быстрые действия — в один клик:"
+        )
+
+        keyboard = keyboard_service.create_start_menu()
+
+        if message_id:
+            await self.bot.edit_message_text(
+                chat_id=user_id,
+                message_id=message_id,
+                text=start_screen_text,
+                reply_markup=keyboard
+            )
+        else:
+            await self.bot.send_message(
+                chat_id=user_id,
+                text=start_screen_text,
                 reply_markup=keyboard
             )
     

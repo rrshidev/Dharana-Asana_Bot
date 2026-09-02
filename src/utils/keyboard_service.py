@@ -8,19 +8,28 @@ class KeyboardService:
     """Сервис для создания клавиатур"""
     
     @staticmethod
+    def create_start_menu() -> InlineKeyboardMarkup:
+        """Создает стартовое меню (быстрые действия после /start)"""
+        buttons = [
+            [InlineKeyboardButton(text='🏠 Главное меню', callback_data='main_menu')],
+            [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
+            [InlineKeyboardButton(text='🎲 Случайная асана', callback_data='random_asana')],
+            [InlineKeyboardButton(text='💎 Премиум-подписка', callback_data='subscription_plans')],
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
     def create_main_menu() -> InlineKeyboardMarkup:
-        """Создает главное меню бота"""
+        """Создает главное меню бота (всё, кроме быстрых действий)"""
         buttons = [
             [InlineKeyboardButton(text='📚 Каталог асан', callback_data='catalog')],
             [InlineKeyboardButton(text='🎬 Готовые комплексы', callback_data='ready_sequences')],
             [InlineKeyboardButton(text='🧘 Основы йоги', callback_data='basics')],
             [InlineKeyboardButton(text='📈 8 ступеней йоги', callback_data='steps')],
             [InlineKeyboardButton(text='🌅 Асана дня', callback_data='daily_asana')],
-            [InlineKeyboardButton(text='🎲 Случайная асана', callback_data='random_asana')],
             [InlineKeyboardButton(text='🏋️‍♂️ Генератор практики', callback_data='sequence_menu')],
-            [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
-            [InlineKeyboardButton(text='💎 Премиум-подписка', callback_data='subscription_plans')],
             [InlineKeyboardButton(text='🔍 Фильтры асан', callback_data='filter_menu')],
+            [InlineKeyboardButton(text='🏠 На главный экран', callback_data='start_screen')],
             [InlineKeyboardButton(text='ℹ️ О боте', callback_data='about')],
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)

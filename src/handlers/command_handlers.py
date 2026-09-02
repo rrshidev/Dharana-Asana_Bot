@@ -26,6 +26,7 @@ class CommandHandlers:
         telegram_id = message.from_user.id
         name = message.from_user.first_name or ""
         username = message.from_user.username or ""
+        display_name = name or username or ""
 
         # Always register/sync user in DB
         try:
@@ -74,15 +75,20 @@ class CommandHandlers:
             )
             return
 
-        await message.reply(
-            "Намаскар!\n"
-            "Это YogaBot - энциклопедия йогических асан!\n"
-            "Введи название асаны на русском языке, например: бакасана или адхо мукха шванасана!\n\n"
-            "Если не знаешь названий асан, воспользуйся удобным Каталогом асан, "
-            "где все позы классифицированы по разделам.\n\n"
-            "Найди нужное название асаны и нажми на кнопку с ним!",
-            reply_markup=self.keyboard_service.create_main_menu()
+        greeting = f"Намаскар, {display_name}! 🙏" if display_name else "Намаскар! 🙏"
+
+        welcome_text = (
+            f"{greeting}\n\n"
+            "Добро пожаловать в **Dharana** — твой гид по йоге! 🧘\n\n"
+            "Здесь ты найдёшь:\n"
+            "• **Каталог** — 100+ асан с фото и подробным описанием\n"
+            "• **Готовые комплексы** и **генератор практики** под твои цели\n"
+            "• **Многофункциональный таймер** для медитаций и практики асан\n"
+            "• **Асану дня** — чтобы оставаться в тонусе каждый день\n\n"
+            "Выбери действие ниже и начнём практику!"
         )
+
+        await message.reply(welcome_text, reply_markup=self.keyboard_service.create_start_menu())
     
     async def help_command(self, message: types.Message):
         """Обработчик команды /help"""
