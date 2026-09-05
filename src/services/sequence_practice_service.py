@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Dict, List, Optional
 from aiogram import types
@@ -18,7 +19,26 @@ class SequencePracticeService:
         self.active_sequences: Dict[int, PracticeSequence] = {}  # user_id -> sequence
         self.current_positions: Dict[int, int] = {}  # user_id -> current position
         self.active_timers: Dict[int, str] = {}  # user_id -> timer_id
-    
+
+    async def _send_phase_notification(self, bot, user_id: int, text: str, delay: int = 2):
+        """Отправляет временное уведомление со звуком и удаляет его через несколько секунд"""
+        try:
+            notification_message = await bot.send_message(
+                user_id,
+                text,
+                parse_mode=ParseMode.MARKDOWN
+            )
+            asyncio.create_task(self._delete_notification_after_delay(bot, user_id, notification_message.message_id, delay))
+        except Exception as e:
+            logger.error(f"Error sending phase notification for user {user_id}: {e}")
+
+    async def _delete_notification_after_delay(self, bot, user_id: int, message_id: int, delay: int):
+        await asyncio.sleep(delay)
+        try:
+            await bot.delete_message(chat_id=user_id, message_id=message_id)
+        except Exception as e:
+            logger.error(f"Error deleting notification {message_id}: {e}")
+
     def start_sequence(self, user_id: int, sequence: PracticeSequence) -> bool:
         """Начинает последовательную практику"""
         try:
@@ -146,6 +166,10 @@ class SequencePracticeService:
         if not current_asana:
             return
         
+        # Звуковое уведомление о смене фазы
+        phase_name = "Отдых 😮‍💨" if current_asana.is_rest else current_asana.asana_name
+        await self._send_phase_notification(bot, user_id, f"🔔**{phase_name}**")
+        
         progress = self.get_progress(user_id)
         
         if current_asana.is_rest:
@@ -202,6 +226,8 @@ class SequencePracticeService:
         sequence = self.active_sequences.get(user_id)
         if not sequence:
             return
+        
+        await self._send_phase_notification(bot, user_id, "🎉 Практика завершена!")
         
         text = (
             f"🎉 **Практика завершена!**\n\n"

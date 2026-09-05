@@ -1,6 +1,7 @@
 from aiogram import types, Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+import asyncio
 import logging
 
 from src.models.sequence_models import SequenceParams, SequenceDifficulty, SequenceDuration, SequenceFocus
@@ -23,6 +24,25 @@ class SequenceHandlers:
         
         # Хранилище параметров пользователей
         self.user_sequences = {}
+
+    async def _send_phase_notification(self, user_id: int, text: str, delay: int = 2):
+        """Отправляет временное уведомление со звуком и удаляет его через несколько секунд"""
+        try:
+            notification_message = await self.bot.send_message(
+                user_id,
+                text,
+                parse_mode=ParseMode.MARKDOWN
+            )
+            asyncio.create_task(self._delete_notification_after_delay(user_id, notification_message.message_id, delay))
+        except Exception as e:
+            logger.error(f"Error sending phase notification for user {user_id}: {e}")
+
+    async def _delete_notification_after_delay(self, user_id: int, message_id: int, delay: int):
+        await asyncio.sleep(delay)
+        try:
+            await self.bot.delete_message(chat_id=user_id, message_id=message_id)
+        except Exception as e:
+            logger.error(f"Error deleting notification {message_id}: {e}")
 
     async def sequence_menu_callback(self, callback_query: types.CallbackQuery):
         """Главное меню генератора последовательностей"""
@@ -535,6 +555,10 @@ class SequenceHandlers:
         if not current_asana:
             return
         
+        # Звуковое уведомление о смене фазы
+        phase_name = "Отдых 😮‍💨" if current_asana.is_rest else current_asana.asana_name
+        await self._send_phase_notification(user_id, f"🔔**{phase_name}**")
+        
         progress = self.practice_service.get_progress(user_id)
         
         if current_asana.is_rest:
@@ -592,6 +616,8 @@ class SequenceHandlers:
         sequence = self.practice_service.active_sequences.get(user_id)
         if not sequence:
             return
+        
+        await self._send_phase_notification(user_id, "🎉 Практика завершена!")
         
         text = (
             f"🎉 **Практика завершена!**\n\n"

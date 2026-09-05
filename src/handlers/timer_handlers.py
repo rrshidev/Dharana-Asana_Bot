@@ -144,14 +144,14 @@ class TimerHandlers:
             # Сохраняем ID сообщения для автообновления
             timer_messages[user_id] = timer_message.message_id
             
-            # Отправляем отдельное уведомление и удаляем его через 5 секунд
+            # Отправляем отдельное уведомление и удаляем его через 2 секунды
             notification_message = await message.answer(
                 f"🔔 **Медитация началась!**\n\n"
                 f"Длительность: {minutes} минут\n"
                 "Сосредоточься на дыхании... 🧘",
                 parse_mode=ParseMode.MARKDOWN
             )
-            asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 5))
+            asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 2))
             return
         
         # Если пользователь в режиме ожидания ввода
@@ -173,14 +173,14 @@ class TimerHandlers:
         # Сохраняем ID сообщения для автообновления
         timer_messages[user_id] = timer_message.message_id
         
-        # Отправляем отдельное уведомление и удаляем его через 5 секунд
+        # Отправляем отдельное уведомление и удаляем его через 2 секунды
         notification_message = await message.answer(
             f"🔔 **Медитация началась!**\n\n"
             f"Длительность: {minutes} минут\n"
             "Сосредоточься на дыхании... 🧘",
             parse_mode=ParseMode.MARKDOWN
         )
-        asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 5))
+        asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 2))
     async def asana_callback(self, callback_query: types.CallbackQuery):
         """Меню конфигурации асан"""
         await self.bot.answer_callback_query(callback_query.id)
@@ -703,6 +703,19 @@ class TimerHandlers:
                             
                             # Проверяем завершение
                             if updated_session.status == TimerStatus.COMPLETED:
+                                # Звуковое уведомление о завершении практики
+                                try:
+                                    complete_notification = await self.bot.send_message(
+                                        user_id,
+                                        "🎉 **Практика завершена!**\n\nОтличная работа! 🙏",
+                                        parse_mode=ParseMode.MARKDOWN
+                                    )
+                                    asyncio.create_task(
+                                        self.delete_notification_after_delay(user_id, complete_notification.message_id, 2)
+                                    )
+                                except Exception as e:
+                                    logger.error(f"Error sending completion notification: {e}")
+
                                 if user_id in timer_messages:
                                     try:
                                         await self.bot.edit_message_text(
@@ -727,8 +740,8 @@ class TimerHandlers:
                                     reply_markup=TimerUI.get_control_keyboard(updated_session),
                                     parse_mode=ParseMode.MARKDOWN
                                 )
-                                # Удаляем уведомление через 5 секунд
-                                asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 5))
+                                # Удаляем уведомление через 2 секунды
+                                asyncio.create_task(self.delete_notification_after_delay(user_id, notification_message.message_id, 2))
                 
                 await asyncio.sleep(1)  # Обновляем каждую секунду
                 
