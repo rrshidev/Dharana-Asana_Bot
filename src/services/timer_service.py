@@ -76,8 +76,8 @@ class TimerService:
             session.total_elapsed += int(pause_duration.total_seconds())
             session.status = TimerStatus.RUNNING
             logger.info(f"Resumed timer for user {user_id} - elapsed: {session.elapsed}s")
-        elif session.status == TimerStatus.STOPPED:
-            # Запускаем заново
+        elif session.status in (TimerStatus.STOPPED, TimerStatus.COMPLETED):
+            # Запускаем заново (в т.ч. после завершения)
             session.elapsed = 0
             session.current_cycle = 1
             session.current_phase = TimerPhase.WORK

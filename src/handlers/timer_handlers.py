@@ -355,9 +355,10 @@ class TimerHandlers:
             config = TimerConfig(asana_name=context_name)
             session = timer_service.create_asana_timer(user_id, config)
         else:
-            if context_name and not session.asana_name:
+            # Таймер запускается из последовательности — всегда обновляем имя текущей асаны
+            if context_name:
                 session.asana_name = context_name
-            timer_service.start_timer(user_id)
+            session = timer_service.start_timer(user_id)
         
         work_text = f"{session.work_duration}с" if session.work_duration < 60 else f"{session.work_duration//60}м"
         rest_text = f"{session.rest_duration}с" if session.rest_duration < 60 else f"{session.rest_duration//60}м"
