@@ -42,6 +42,7 @@ class TimerSession:
     cycles: int = 1            # количество циклов
     current_cycle: int = 1      # текущий цикл
     asana_name: Optional[str] = None  # название текущей асаны (для асан)
+    is_rest: bool = False  # текущий элемент последовательности — отдых (для асан)
 
     # Только для пранаямы
     exercises: int = 3         # количество упражнений

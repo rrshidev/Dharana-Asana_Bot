@@ -250,8 +250,11 @@ class TimerUI:
                 "Ты молодец! Хочешь начать новую практику?"
             )
         
-        phase_emoji = "💪" if session.current_phase == TimerPhase.WORK else "🛏️"
-        phase_name = "Работа" if session.current_phase == TimerPhase.WORK else "Отдых"
+        phase_emoji = "🛏️"
+        phase_name = "Отдых"
+        if not session.is_rest:
+            phase_emoji = "💪" if session.current_phase == TimerPhase.WORK else "🛏️"
+            phase_name = "Работа" if session.current_phase == TimerPhase.WORK else "Отдых"
         status_emoji = "⏸️" if session.status == TimerStatus.PAUSED else phase_emoji
         
         remaining = session.get_remaining_time()

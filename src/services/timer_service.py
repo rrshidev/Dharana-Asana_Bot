@@ -145,11 +145,16 @@ class TimerService:
             # Асаны/пранаяма - проверяем фазы
             if session.current_phase == TimerPhase.WORK:
                 if session.elapsed >= session.work_duration:
-                    # Переход к отдыху
-                    session.current_phase = TimerPhase.REST
-                    session.elapsed = 0
-                    session.start_time = now
-                    logger.info(f"User {user_id} switched to rest phase, cycle {session.current_cycle}")
+                    if session.rest_duration > 0:
+                        # Переход к отдыху
+                        session.current_phase = TimerPhase.REST
+                        session.elapsed = 0
+                        session.start_time = now
+                        logger.info(f"User {user_id} switched to rest phase, cycle {session.current_cycle}")
+                    else:
+                        # Фаза отдыха не предусмотрена — завершаем сразу
+                        session.status = TimerStatus.COMPLETED
+                        logger.info(f"Asana/Pranayama completed for user {user_id}")
             else:  # REST phase
                 if session.elapsed >= session.rest_duration:
                     # Увеличиваем цикл ПОСЛЕ отдыха

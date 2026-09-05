@@ -116,9 +116,11 @@ class SequencePracticeService:
         
         try:
             # Создаем конфигурацию таймера для текущей асаны
+            # Отдых уже заложен отдельными элементами последовательности,
+            # поэтому отдельной фазы отдыха в таймере не делаем
             timer_config = TimerConfig(
                 work_duration=current_asana.duration_seconds,
-                rest_duration=15 if not current_asana.is_rest else 0,  # 15с отдых между асанами
+                rest_duration=0,
                 cycles=1,
                 asana_name=current_asana.asana_name
             )
@@ -128,6 +130,8 @@ class SequencePracticeService:
                 user_id=user_id,
                 config=timer_config
             )
+            if timer_id and current_asana.is_rest:
+                timer_id.is_rest = True
             
             self.active_timers[user_id] = timer_id
             timer_service.start_timer(user_id)

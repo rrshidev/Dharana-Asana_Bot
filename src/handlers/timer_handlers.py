@@ -757,7 +757,8 @@ class TimerHandlers:
                             
                             # Проверяем смену фазы (для асан) - отправляем временное уведомление
                             elif (updated_session.timer_type in [TimerType.ASANA, TimerType.PRANAYAMA] and
-                                  old_phase != updated_session.current_phase):
+                                  old_phase != updated_session.current_phase and
+                                  updated_session.rest_duration > 0):
                                 notification_message = await self.bot.send_message(
                                     user_id,
                                     TimerUI.get_phase_notification(updated_session),
