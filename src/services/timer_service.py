@@ -38,6 +38,7 @@ class TimerService:
             rest_duration=config.rest_duration,
             cycles=config.cycles,
             current_cycle=1,
+            asana_name=config.asana_name,
             start_time=datetime.now()
         )
         self.active_sessions[user_id] = session

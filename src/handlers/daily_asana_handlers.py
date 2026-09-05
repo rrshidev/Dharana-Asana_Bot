@@ -621,7 +621,8 @@ class DailyAsanaHandlers:
         config = TimerConfig(
             work_duration=work_time,
             rest_duration=rest_time,
-            cycles=cycles
+            cycles=cycles,
+            asana_name=asana_name
         )
         
         # Создаем и запускаем таймер

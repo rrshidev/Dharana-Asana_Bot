@@ -236,11 +236,16 @@ class TimerUI:
     @staticmethod
     def _format_asana_message(session: TimerSession) -> str:
         """Отформатировать сообщение для асан/пранаямы"""
-        timer_name = "🧘‍♂️ Асана" if session.timer_type == TimerType.ASANA else "🌬️ Пранаяма"
+        if session.asana_name and session.timer_type == TimerType.ASANA:
+            timer_name = f"🧘 **{session.asana_name}**"
+        elif session.timer_type == TimerType.ASANA:
+            timer_name = "🧘 **Асана**"
+        else:
+            timer_name = "🌬️ **Пранаяма**"
         
         if session.status == TimerStatus.COMPLETED:
             return (
-                f"{timer_name} **практика завершена!**\n\n"
+                f"{timer_name} **— практика завершена!**\n\n"
                 "Отличная работа! Все циклы выполнены. 💪\n\n"
                 "Ты молодец! Хочешь начать новую практику?"
             )

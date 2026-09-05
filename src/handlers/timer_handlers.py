@@ -7,7 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.services.timer_service import timer_service
 from src.utils.timer_ui import TimerUI
-from src.models.timer_models import TimerType, TimerStatus, TimerPhase, TimerConfig, PranayamaConfig, timer_messages
+from src.models.timer_models import TimerType, TimerStatus, TimerPhase, TimerConfig, PranayamaConfig, timer_messages, practice_asana_context
 
 logger = logging.getLogger(__name__)
 
@@ -199,10 +199,14 @@ class TimerHandlers:
         work_text = f"{config.work_duration}с" if config.work_duration < 60 else f"{config.work_duration//60}м"
         rest_text = f"{config.rest_duration}с" if config.rest_duration < 60 else f"{config.rest_duration//60}м"
         
+        # Показываем имя текущей асаны (если таймер запущен из последовательности)
+        context_name = practice_asana_context.get(callback_query.from_user.id)
+        title = f"🧘‍♂️ **Таймер асан: {context_name}**" if context_name else "🧘‍♂️ **Таймер асан**"
+        
         await self.bot.edit_message_text(
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
-            text=f"🧘‍♂️ **Таймер асан**\n\n"
+            text=f"{title}\n\n"
             f"⏱️ Работа: {work_text}\n"
             f"⏸️ Отдых: {rest_text}\n"
             f"🔄 Циклы: {config.cycles}\n\n"
@@ -343,20 +347,26 @@ class TimerHandlers:
         """Запуск таймера асан"""
         await self.bot.answer_callback_query(callback_query.id)
         
-        session = timer_service.get_session(callback_query.from_user.id)
+        user_id = callback_query.from_user.id
+        context_name = practice_asana_context.pop(user_id, None)
+        
+        session = timer_service.get_session(user_id)
         if not session or session.timer_type != TimerType.ASANA:
-            config = TimerConfig()
-            session = timer_service.create_asana_timer(callback_query.from_user.id, config)
+            config = TimerConfig(asana_name=context_name)
+            session = timer_service.create_asana_timer(user_id, config)
         else:
-            timer_service.start_timer(callback_query.from_user.id)
+            if context_name and not session.asana_name:
+                session.asana_name = context_name
+            timer_service.start_timer(user_id)
         
         work_text = f"{session.work_duration}с" if session.work_duration < 60 else f"{session.work_duration//60}м"
         rest_text = f"{session.rest_duration}с" if session.rest_duration < 60 else f"{session.rest_duration//60}м"
+        start_title = f"🧘‍♂️ **Практика: {session.asana_name}**" if session.asana_name else "🧘‍♂️ **Практика асан начата!**"
         
         message = await self.bot.edit_message_text(
             chat_id=callback_query.from_user.id,
             message_id=callback_query.message.message_id,
-            text=f"🧘‍♂️ **Практика асан начата!**\n\n"
+            text=f"{start_title}\n\n"
             f"⏱️ Работа: {work_text}\n"
             f"⏸️ Отдых: {rest_text}\n"
             f"🔄 Циклы: {session.cycles}\n\n"
@@ -590,6 +600,7 @@ class TimerHandlers:
         elif action == "stop":
             session = timer_service.stop_timer(user_id)
             if session:
+                practice_asana_context.pop(user_id, None)
                 # Удаляем сообщение таймера
                 if user_id in timer_messages:
                     try:
@@ -618,6 +629,7 @@ class TimerHandlers:
         elif action == "delete":
             session = timer_service.get_session(user_id)
             if session:
+                practice_asana_context.pop(user_id, None)
                 await self.bot.edit_message_text(
                     chat_id=callback_query.from_user.id,
                     message_id=callback_query.message.message_id,
@@ -703,6 +715,7 @@ class TimerHandlers:
                             
                             # Проверяем завершение
                             if updated_session.status == TimerStatus.COMPLETED:
+                                practice_asana_context.pop(user_id, None)
                                 # Звуковое уведомление о завершении практики
                                 try:
                                     complete_notification = await self.bot.send_message(

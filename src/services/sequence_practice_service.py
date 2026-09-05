@@ -120,7 +120,8 @@ class SequencePracticeService:
             timer_config = TimerConfig(
                 work_duration=current_asana.duration_seconds,
                 rest_duration=15 if not current_asana.is_rest else 0,  # 15с отдых между асанами
-                cycles=1
+                cycles=1,
+                asana_name=current_asana.asana_name
             )
             
             # Запускаем таймер

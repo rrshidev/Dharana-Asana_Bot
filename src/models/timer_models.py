@@ -41,6 +41,7 @@ class TimerSession:
     rest_duration: int = 0      # время отдыха в секундах
     cycles: int = 1            # количество циклов
     current_cycle: int = 1      # текущий цикл
+    asana_name: Optional[str] = None  # название текущей асаны (для асан)
 
     # Только для пранаямы
     exercises: int = 3         # количество упражнений
@@ -89,6 +90,7 @@ class TimerConfig:
     work_duration: int = 60    # по умолчанию 60 секунд работы
     rest_duration: int = 20    # по умолчанию 20 секунд отдыха
     cycles: int = 5            # по умолчанию 5 циклов
+    asana_name: Optional[str] = None  # название текущей асаны
 
 
 # Хранилище активных сессий
@@ -96,3 +98,6 @@ active_sessions: Dict[int, TimerSession] = {}
 
 # Хранилище ID сообщений таймера для редактирования
 timer_messages: Dict[int, int] = {}  # user_id -> message_id
+
+# Хранилище имени текущей практикуемой асаны (из последовательности)
+practice_asana_context: Dict[int, str] = {}  # user_id -> asana_name

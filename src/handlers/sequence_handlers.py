@@ -5,6 +5,7 @@ import asyncio
 import logging
 
 from src.models.sequence_models import SequenceParams, SequenceDifficulty, SequenceDuration, SequenceFocus
+from src.models.timer_models import practice_asana_context
 from src.services.sequence_generator import SequenceGenerator
 from src.services.sequence_practice_service import SequencePracticeService
 from src.services.data_service import DataService
@@ -377,13 +378,23 @@ class SequenceHandlers:
             subscription_info = self.subscription_service.get_subscription_info(user_id)
             status_info = f"\n💎 {subscription_info['status']}"
             
+            # Компактный список асан практики
+            asana_lines = []
+            for i, item in enumerate(sequence.items, 1):
+                if item.is_rest:
+                    asana_lines.append(f"{i}. 🔄 Отдых — {item.duration_seconds}с")
+                else:
+                    asana_lines.append(f"{i}. 🧘 {item.asana_name} — {item.duration_seconds}с")
+            asana_list_text = "\n".join(asana_lines)
+            
             text = (
                 f"🎉 **Ваша последовательность готова!**\n\n"
                 f"🎯 **Сложность:** {difficulty_names[params.difficulty.value]}\n"
                 f"⏱️ **Длительность:** {params.duration.value} минут\n"
                 f"🎪 **Фокус:** {focus_names[params.focus.value]}\n"
-                f"🔥 **Калории:** ~{sequence.estimated_calories} ккал\n"
-                f"📋 **Асан в последовательности:** {len(sequence.items)}{status_info}\n\n"
+                f"🔥 **Калории:** ~{sequence.estimated_calories} ккал\n\n"
+                f"📋 **Практика ({len(sequence.items)} позиций):**\n"
+                f"{asana_list_text}{status_info}\n\n"
                 f"Готовы начать практику?"
             )
             
@@ -473,6 +484,9 @@ class SequenceHandlers:
         if not current_asana:
             return
         
+        # Запоминаем имя текущей асаны для таймера
+        practice_asana_context[user_id] = current_asana.asana_name
+        
         progress = self.practice_service.get_progress(user_id)
         
         if current_asana.is_rest:
@@ -554,6 +568,9 @@ class SequenceHandlers:
         current_asana = self.practice_service.get_current_asana(user_id)
         if not current_asana:
             return
+        
+        # Запоминаем имя текущей асаны для таймера
+        practice_asana_context[user_id] = current_asana.asana_name
         
         # Звуковое уведомление о смене фазы
         phase_name = "Отдых 😮‍💨" if current_asana.is_rest else current_asana.asana_name
