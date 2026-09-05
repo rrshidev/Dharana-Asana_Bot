@@ -5,7 +5,9 @@ import asyncio
 import logging
 
 from src.models.sequence_models import SequenceParams, SequenceDifficulty, SequenceDuration, SequenceFocus
-from src.models.timer_models import practice_asana_context
+from src.models.timer_models import practice_asana_context, timer_messages, sequence_advance_callbacks
+from src.services.timer_service import timer_service
+from src.utils.timer_ui import TimerUI
 from src.services.sequence_generator import SequenceGenerator
 from src.services.sequence_practice_service import SequencePracticeService
 from src.services.data_service import DataService
@@ -468,8 +470,15 @@ class SequenceHandlers:
         
         sequence = self.user_sequences[user_id]['current_sequence']
         
+        # Сбрасываем предыдущую незавершённую практику
+        if user_id in self.practice_service.active_sequences:
+            self.practice_service.stop_sequence(user_id)
+        sequence_advance_callbacks.pop(user_id, None)
+        
         # Запускаем последовательную практику
         if self.practice_service.start_sequence(user_id, sequence):
+            # Автопереход между асанами при завершении таймера
+            sequence_advance_callbacks[user_id] = self._advance_sequence
             # Отправляем первую асану
             await self._send_first_asana(user_id, callback_query.message.message_id)
         else:
@@ -538,6 +547,43 @@ class SequenceHandlers:
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
+
+        # Автозапуск таймера первой асаны — практика идёт цепочкой таймеров
+        await self._auto_start_asana_timer(user_id, message_id)
+    
+    async def _auto_start_asana_timer(self, user_id: int, message_id: int):
+        """Автоматически запускает таймер текущей асаны и выводит отсчёт в её сообщение"""
+        try:
+            started = await self.practice_service.start_timer_for_asana(user_id, self.bot, message_id)
+            if started:
+                timer_messages[user_id] = message_id
+                session = timer_service.get_session(user_id)
+                if session:
+                    await self.bot.edit_message_text(
+                        chat_id=user_id,
+                        message_id=message_id,
+                        text=TimerUI.format_timer_message(session),
+                        reply_markup=TimerUI.get_control_keyboard(session),
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+        except Exception as e:
+            logger.error(f"Error auto-starting timer for user {user_id}: {e}")
+    
+    async def _advance_sequence(self, user_id: int, message_id: int | None):
+        """Переход к следующей асане при завершении таймера текущей"""
+        if user_id not in self.practice_service.active_sequences:
+            sequence_advance_callbacks.pop(user_id, None)
+            return
+        if message_id is None:
+            message_id = timer_messages.get(user_id)
+        if self.practice_service.move_to_next_asana(user_id):
+            sequence_advance_callbacks[user_id] = self._advance_sequence
+            if message_id:
+                await self._send_next_asana(user_id, self.bot, message_id)
+        else:
+            sequence_advance_callbacks.pop(user_id, None)
+            if message_id:
+                await self._send_sequence_complete(user_id, self.bot, message_id)
     
     async def sequence_pause_callback(self, callback_query: types.CallbackQuery):
         """Поставить практику на паузу"""
@@ -627,6 +673,9 @@ class SequenceHandlers:
                 parse_mode=ParseMode.MARKDOWN,
                 reply_markup=keyboard
             )
+
+        # Автозапуск таймера следующей асаны
+        await self._auto_start_asana_timer(user_id, message_id)
     
     async def _send_sequence_complete(self, user_id: int, bot, message_id: int):
         """Отправляет сообщение о завершении последовательности"""
@@ -659,6 +708,7 @@ class SequenceHandlers:
         )
         
         # Останавливаем последовательность
+        sequence_advance_callbacks.pop(user_id, None)
         self.practice_service.stop_sequence(user_id)
     
     async def sequence_stop_callback(self, callback_query: types.CallbackQuery):
@@ -666,6 +716,7 @@ class SequenceHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         user_id = callback_query.from_user.id
         
+        sequence_advance_callbacks.pop(user_id, None)
         self.practice_service.stop_sequence(user_id)
         
         text = (

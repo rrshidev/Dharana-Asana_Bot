@@ -7,7 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from src.services.timer_service import timer_service
 from src.utils.timer_ui import TimerUI
-from src.models.timer_models import TimerType, TimerStatus, TimerPhase, TimerConfig, PranayamaConfig, timer_messages, practice_asana_context
+from src.models.timer_models import TimerType, TimerStatus, TimerPhase, TimerConfig, PranayamaConfig, timer_messages, practice_asana_context, sequence_advance_callbacks
 
 logger = logging.getLogger(__name__)
 
@@ -717,6 +717,18 @@ class TimerHandlers:
                             # Проверяем завершение
                             if updated_session.status == TimerStatus.COMPLETED:
                                 practice_asana_context.pop(user_id, None)
+                                timer_message_id = timer_messages.get(user_id)
+                                timer_service.delete_session(user_id)
+
+                                # Автопереход к следующей асане последовательности
+                                advance_cb = sequence_advance_callbacks.get(user_id)
+                                if advance_cb:
+                                    try:
+                                        await advance_cb(user_id, timer_message_id)
+                                        continue
+                                    except Exception as e:
+                                        logger.error(f"Error advancing sequence for user {user_id}: {e}")
+
                                 # Звуковое уведомление о завершении практики
                                 try:
                                     complete_notification = await self.bot.send_message(
@@ -742,8 +754,6 @@ class TimerHandlers:
                                     except:
                                         pass
                                     del timer_messages[user_id]
-                                
-                                timer_service.delete_session(user_id)
                             
                             # Проверяем смену фазы (для асан) - отправляем временное уведомление
                             elif (updated_session.timer_type in [TimerType.ASANA, TimerType.PRANAYAMA] and

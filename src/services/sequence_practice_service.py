@@ -89,8 +89,7 @@ class SequencePracticeService:
             del self.current_positions[user_id]
         
         if user_id in self.active_timers:
-            timer_id = self.active_timers[user_id]
-            timer_service.stop_timer(timer_id)
+            timer_service.stop_timer(user_id)
             del self.active_timers[user_id]
         
         logger.info(f"Stopped sequence practice for user {user_id}")
@@ -131,7 +130,7 @@ class SequencePracticeService:
             )
             
             self.active_timers[user_id] = timer_id
-            timer_service.start_timer(timer_id)
+            timer_service.start_timer(user_id)
             
             logger.info(f"Started timer for asana '{current_asana.asana_name}' for user {user_id}")
             return True

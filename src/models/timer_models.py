@@ -101,3 +101,6 @@ timer_messages: Dict[int, int] = {}  # user_id -> message_id
 
 # Хранилище имени текущей практикуемой асаны (из последовательности)
 practice_asana_context: Dict[int, str] = {}  # user_id -> asana_name
+
+# Колбэки автоперехода к следующей асане последовательности при завершении таймера
+sequence_advance_callbacks: Dict[int, object] = {}  # user_id -> callable(user_id, message_id)
