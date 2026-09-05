@@ -4,6 +4,7 @@ import os
 import httpx
 from aiogram import types
 from aiogram.enums import ParseMode
+from aiogram.types import BufferedInputFile
 
 logger = logging.getLogger(__name__)
 
@@ -636,7 +637,24 @@ class AdminHandlers:
             if not tg_id:
                 continue
             try:
-                await self.bot.send_message(int(tg_id), "📣 " + (it.get("message") or ""))
+                text = "📣 " + (it.get("message") or "")
+                media_url = it.get("media_url")
+                sent = False
+                if media_url:
+                    try:
+                        data, ext = await self._fetch_media_bytes(media_url)
+                        if data:
+                            filename = f"attachment_{delivery_id}{ext}"
+                            await self.bot.send_photo(
+                                int(tg_id),
+                                photo=BufferedInputFile(data, filename=filename),
+                                caption=text,
+                            )
+                            sent = True
+                    except Exception as e:
+                        logger.error("bc media send to %s error: %s", tg_id, e)
+                if not sent:
+                    await self.bot.send_message(int(tg_id), text)
             except Exception as e:
                 logger.error("bc send to %s error: %s", tg_id, e)
                 try:
@@ -648,3 +666,17 @@ class AdminHandlers:
                         )
                 except Exception as e2:
                     logger.error("bc report failed %s error: %s", delivery_id, e2)
+
+    async def _fetch_media_bytes(self, media_url):
+        """Скачать вложение (bytes + расширение) с API по внутреннему адресу."""
+        if not media_url:
+            return None, None
+        url = media_url.replace("/uploads/", f"{API_URL}/uploads/").replace(
+            "http://localhost:8000", API_URL
+        )
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                return None, None
+            ext = os.path.splitext(media_url)[1].lower() or ".jpg"
+            return resp.content, ext
