@@ -112,7 +112,7 @@ class CommandHandlers:
             '----> /help - Помощь и информация о функциях ❓❗️\n'
             '----> /what - Что умеет бот 🤖\n'
             '----> /info - Подробная информация об асанах и таймере ❓❗️\n'
-            '----> /about_us - об авторах и реализаторах проекта\n'
+            '----> /about\\_us - об авторах и реализаторах проекта\n'
             '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
         )
         await message.reply(help_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
