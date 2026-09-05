@@ -305,10 +305,10 @@ class SequenceHandlers:
             return
         
         # Проверяем лимиты генераций
-        can_generate, message = self.subscription_service.can_generate_sequence(user_id)
+        can_generate, message = await self.subscription_service.can_generate_sequence(user_id)
         if not can_generate:
             # Показываем сообщение с предложением подписки
-            subscription_info = self.subscription_service.get_subscription_info(user_id)
+            subscription_info = await self.subscription_service.get_subscription_info(user_id)
             
             text = (
                 f"{message}\n\n"
@@ -343,7 +343,7 @@ class SequenceHandlers:
         )
         
         # Используем генерацию (считаем лимит для бесплатных пользователей)
-        generation_used = self.subscription_service.use_generation(user_id)
+        generation_used = await self.subscription_service.use_generation(user_id)
         if not generation_used[0]:
             await self.bot.edit_message_text(
                 chat_id=user_id,
@@ -375,7 +375,7 @@ class SequenceHandlers:
             }
             
             # Добавляем информацию о статусе подписки
-            subscription_info = self.subscription_service.get_subscription_info(user_id)
+            subscription_info = await self.subscription_service.get_subscription_info(user_id)
             status_info = f"\n💎 {subscription_info['status']}"
             
             # Компактный список асан практики

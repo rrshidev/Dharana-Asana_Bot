@@ -41,7 +41,7 @@ class MessageHandlers:
         """Отправляет данные асаны с видео или фото"""
         try:
             # Проверяем статус подписки пользователя
-            subscription_info = self.subscription_service.get_subscription_info(message.from_user.id)
+            subscription_info = await self.subscription_service.get_subscription_info(message.from_user.id)
             is_premium = subscription_info['is_active']
             
             # Ищем видео для этой асаны

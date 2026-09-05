@@ -31,7 +31,7 @@ class SubscriptionMiddleware(BaseMiddleware):
             return await handler(event, data)
         
         # Получаем информацию о подписке
-        subscription_info = self.subscription_service.get_subscription_info(telegram_id)
+        subscription_info = await self.subscription_service.get_subscription_info(telegram_id)
         
         # Добавляем информацию о подписке в data
         data['subscription'] = subscription_info
@@ -69,7 +69,7 @@ class PremiumFeatureMiddleware(BaseMiddleware):
             return await handler(event, data)
         
         # Проверяем доступ к премиум-фиче
-        can_access, message = self.subscription_service.can_generate_sequence(telegram_id)
+        can_access, message = await self.subscription_service.can_generate_sequence(telegram_id)
         
         if not can_access:
             # Если нет доступа, отправляем сообщение с предложением подписки

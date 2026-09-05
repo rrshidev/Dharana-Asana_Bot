@@ -28,8 +28,9 @@ _pay_text = (
 
 
 class PaymentHandlers:
-    def __init__(self, bot):
+    def __init__(self, bot, subscription_service=None):
         self.bot = bot
+        self.subscription_service = subscription_service
 
     def _headers(self):
         return {"X-Bot-Key": BOT_ADMIN_KEY}
@@ -343,6 +344,8 @@ class PaymentHandlers:
             return
 
         data = resp.json()
+        if self.subscription_service is not None:
+            self.subscription_service.clear_api_cache()
         await self.bot.answer_callback_query(
             callback_query.id,
             text="Подтверждено ✅" if status == "confirmed" else "Отклонено ❌",

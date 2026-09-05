@@ -75,7 +75,7 @@ class ReadySequenceHandlers:
                 return
             
             # Проверяем статус подписки
-            subscription_info = self.subscription_service.get_subscription_info(user_id)
+            subscription_info = await self.subscription_service.get_subscription_info(user_id)
             is_premium = subscription_info['is_active']
             
             # Краткая информация о доступности (без вымышленных метаданных)

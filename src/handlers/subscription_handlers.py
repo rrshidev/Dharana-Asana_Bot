@@ -20,7 +20,7 @@ class SubscriptionHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         user_id = callback_query.from_user.id
         
-        subscription_info = self.subscription_service.get_subscription_info(user_id)
+        subscription_info = await self.subscription_service.get_subscription_info(user_id)
         
         text = (
             f"💎 **Премиум-доступ к Йога Энциклопедии**\n\n"
@@ -203,7 +203,7 @@ class SubscriptionHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         user_id = callback_query.from_user.id
         
-        subscription_info = self.subscription_service.get_subscription_info(user_id)
+        subscription_info = await self.subscription_service.get_subscription_info(user_id)
         
         if subscription_info['is_active']:
             if subscription_info['is_trial']:

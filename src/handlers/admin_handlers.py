@@ -32,8 +32,9 @@ _ADM_HELP = (
 class AdminHandlers:
     """Обработчики админ-команд бота (только для админов)"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, subscription_service=None):
         self.bot = bot
+        self.subscription_service = subscription_service
 
     def _headers(self):
         return {"X-Bot-Key": BOT_ADMIN_KEY}
@@ -293,6 +294,9 @@ class AdminHandlers:
         except Exception as e:
             logger.error(f"set_premium error: {e}")
             return await message.reply("Не удалось выполнить операцию. Внутренняя ошибка.")
+
+        if self.subscription_service is not None:
+            self.subscription_service.clear_api_cache()
 
         if grant:
             end = str(data.get("subscription_end"))[:10]

@@ -245,7 +245,7 @@ class CallbackHandlers:
         """Отправляет полное описание асаны с фото или видео"""
         try:
             # Проверяем статус подписки пользователя
-            subscription_info = self.subscription_service.get_subscription_info(user_id)
+            subscription_info = await self.subscription_service.get_subscription_info(user_id)
             is_premium = subscription_info['is_active']
             
             # Ищем видео для этой асаны

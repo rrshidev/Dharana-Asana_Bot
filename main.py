@@ -61,10 +61,10 @@ class YogaBot:
         self.subscription_handlers = SubscriptionHandlers(self.bot, subscription_service)
         
         # Инициализация админ-обработчиков
-        self.admin_handlers = AdminHandlers(self.bot)
+        self.admin_handlers = AdminHandlers(self.bot, subscription_service)
 
         # Инициализация обработчиков оплаты
-        self.payment_handlers = PaymentHandlers(self.bot)
+        self.payment_handlers = PaymentHandlers(self.bot, subscription_service)
         
         # Передаем обработчики в callback_handlers
         self.callback_handlers.daily_asana_handlers = self.daily_asana_handlers
