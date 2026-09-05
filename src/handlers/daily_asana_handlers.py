@@ -398,6 +398,25 @@ class DailyAsanaHandlers:
         logger.info(f"DEBUG: Using asana name: {asana_name}")
         
         # Показываем меню настройки таймера для асаны
+        await self._show_daily_practice_work_menu(user_id)
+    
+    async def _show_daily_practice_work_menu(self, user_id: int, message_id: int = None):
+        """Показать меню выбора времени работы практики"""
+        import random
+        from datetime import date
+        today = date.today()
+        # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
+        random.seed(today.toordinal())
+        asana_data = self.scheduler.data_service.get_random_asana()
+        
+        if not asana_data:
+            logger.error("DEBUG: No asana data found for today")
+            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            return
+        
+        asana_name = asana_data.name
+        
+        # Показываем меню настройки таймера для асаны
         practice_text = (
             f"🕐 **Практика: {asana_name}**\n\n"
             f"Настройте таймер для вашей практики:\n\n"
@@ -430,11 +449,50 @@ class DailyAsanaHandlers:
             "callback_data": "daily_asana"
         }])
         
-        await self.bot.send_message(
-            chat_id=user_id,
-            text=practice_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup={"inline_keyboard": keyboard}
+        if message_id:
+            await self.bot.edit_message_text(
+                chat_id=user_id,
+                message_id=message_id,
+                text=practice_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup={"inline_keyboard": keyboard}
+            )
+        else:
+            await self.bot.send_message(
+                chat_id=user_id,
+                text=practice_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup={"inline_keyboard": keyboard}
+            )
+    
+    async def daily_practice_work_back_callback(self, callback_query: types.CallbackQuery):
+        """Возврат из меню отдыха в меню времени работы"""
+        await self.bot.answer_callback_query(callback_query.id)
+        
+        data = callback_query.data.split('_')
+        if len(data) < 5:
+            return
+        
+        user_id = int(data[4])
+        await self._show_daily_practice_work_menu(
+            user_id,
+            message_id=callback_query.message.message_id
+        )
+    
+    async def daily_practice_rest_back_callback(self, callback_query: types.CallbackQuery):
+        """Возврат из меню циклов в меню времени отдыха"""
+        await self.bot.answer_callback_query(callback_query.id)
+        
+        data = callback_query.data.split('_')
+        if len(data) < 6:
+            return
+        
+        user_id = int(data[4])
+        work_time = int(data[5])
+        await self._show_daily_practice_rest_menu(
+            user_id,
+            work_time,
+            callback_query.message.message_id
         )
     
     async def daily_practice_work_callback(self, callback_query: types.CallbackQuery):
@@ -465,6 +523,28 @@ class DailyAsanaHandlers:
         asana_name = asana_data.name
         
         # Показываем меню выбора времени отдыха
+        await self._show_daily_practice_rest_menu(
+            user_id,
+            work_time,
+            callback_query.message.message_id
+        )
+    
+    async def _show_daily_practice_rest_menu(self, user_id: int, work_time: int, message_id: int):
+        """Показать меню выбора времени отдыха практики"""
+        import random
+        from datetime import date
+        today = date.today()
+        # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
+        random.seed(today.toordinal())
+        asana_data = self.scheduler.data_service.get_random_asana()
+        
+        if not asana_data:
+            logger.error("DEBUG: No asana data found for today")
+            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            return
+        
+        asana_name = asana_data.name
+        
         rest_text = (
             f"🕐 **Практика: {asana_name}**\n\n"
             f"Время работы: {work_time // 60} мин {work_time % 60} сек\n\n"
@@ -488,9 +568,14 @@ class DailyAsanaHandlers:
             "callback_data": f"daily_practice_custom_rest_{user_id}_{work_time}"
         }])
         
+        keyboard.append([{
+            "text": "🔙 Назад",
+            "callback_data": f"daily_practice_work_back_{user_id}"
+        }])
+        
         await self.bot.edit_message_text(
             chat_id=user_id,
-            message_id=callback_query.message.message_id,
+            message_id=message_id,
             text=rest_text,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup={"inline_keyboard": keyboard}
@@ -543,6 +628,11 @@ class DailyAsanaHandlers:
                 "text": text,
                 "callback_data": f"daily_practice_start_{user_id}_{work_time}_{rest_time}_{count}"
             }])
+        
+        keyboard.append([{
+            "text": "🔙 Назад",
+            "callback_data": f"daily_practice_rest_back_{user_id}_{work_time}"
+        }])
         
         await self.bot.edit_message_text(
             chat_id=user_id,

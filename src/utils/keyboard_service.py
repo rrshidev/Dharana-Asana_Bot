@@ -22,6 +22,7 @@ class KeyboardService:
     def create_main_menu() -> InlineKeyboardMarkup:
         """Создает главное меню бота (всё, кроме быстрых действий)"""
         buttons = [
+            [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
             [InlineKeyboardButton(text='📚 Каталог асан', callback_data='catalog')],
             [InlineKeyboardButton(text='🎬 Готовые комплексы', callback_data='ready_sequences')],
             [InlineKeyboardButton(text='🧘 Основы йоги', callback_data='basics')],
@@ -69,6 +70,9 @@ class KeyboardService:
                     callback_data = category.name
             
             buttons.append([InlineKeyboardButton(text=text, callback_data=callback_data)])
+        
+        # Кнопка возврата в главное меню
+        buttons.append([InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
     @staticmethod

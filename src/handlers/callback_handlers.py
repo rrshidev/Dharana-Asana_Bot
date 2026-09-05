@@ -75,6 +75,13 @@ class CallbackHandlers:
         global_asana_index = self.data_service.get_category_global_start_index(category_name)
         for i, asana in enumerate(category.asanas):
             await self._send_asana_with_thumbnail(callback_query.from_user.id, asana, category_name, global_asana_index + i)
+        
+        # Сообщение с возвратом в каталог
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            '🔙 Вернуться к выбору раздела:',
+            reply_markup=self.keyboard_service.create_back_to_catalog_menu()
+        )
     
     async def asana_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора асаны"""
@@ -126,6 +133,9 @@ class CallbackHandlers:
         
         data = self.data_service.load_data()
         keyboard = self.keyboard_service.create_simple_menu(data.basics, 'basic')
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')]
+        )
         
         await self.bot.send_message(
             callback_query.from_user.id,
@@ -170,6 +180,9 @@ class CallbackHandlers:
         
         data = self.data_service.load_data()
         keyboard = self.keyboard_service.create_simple_menu(data.steps, 'step')
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')]
+        )
         
         await self.bot.send_message(
             callback_query.from_user.id,

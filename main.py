@@ -127,8 +127,11 @@ class YogaBot:
         self.dp.callback_query(F.data.startswith('daily_timezone_select_'))(self.daily_asana_handlers.daily_timezone_select_callback)
         self.dp.callback_query(F.data == 'daily_time_manual')(self.daily_asana_handlers.daily_time_manual_callback)
         self.dp.callback_query(F.data == 'daily_time_manual_welcome')(self.daily_asana_handlers.daily_time_manual_welcome_callback)
+        self.dp.callback_query(F.data == 'daily_asana_settings')(self.daily_asana_handlers.daily_asana_settings_callback)
         
         # Обработчики практики асаны дня (более конкретные паттерны идут ПЕРВЫМИ)
+        self.dp.callback_query(F.data.startswith('daily_practice_rest_back_'))(self.daily_asana_handlers.daily_practice_rest_back_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_work_back_'))(self.daily_asana_handlers.daily_practice_work_back_callback)
         self.dp.callback_query(F.data.startswith('daily_practice_start_'))(self.daily_asana_handlers.daily_practice_start_callback)
         self.dp.callback_query(F.data.startswith('daily_practice_rest_'))(self.daily_asana_handlers.daily_practice_rest_callback)
         self.dp.callback_query(F.data.startswith('daily_practice_work_'))(self.daily_asana_handlers.daily_practice_work_callback)
@@ -172,6 +175,9 @@ class YogaBot:
         self.dp.callback_query(F.data == 'subscription_monthly')(self.subscription_handlers.subscription_monthly_callback)
         self.dp.callback_query(F.data == 'subscription_yearly')(self.subscription_handlers.subscription_yearly_callback)
         self.dp.callback_query(F.data == 'subscription_status')(self.subscription_handlers.subscription_status_callback)
+        # Кнопки оформления подписки из премиум-предложений (асана дня и карточки асан)
+        self.dp.callback_query(F.data == 'premium_buy_monthly')(self.subscription_handlers.subscription_monthly_callback)
+        self.dp.callback_query(F.data == 'premium_buy_yearly')(self.subscription_handlers.subscription_yearly_callback)
         logger.info("Subscription handlers registered")
         
         # Готовые комплексы
