@@ -5,7 +5,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from src.models.video_models import AsanaVideo, VideoProcessingQueue
+from src.models.video_models import AsanaVideo
 from src.services.database_service import DatabaseService
 
 logger = logging.getLogger(__name__)

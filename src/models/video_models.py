@@ -37,28 +37,3 @@ class AsanaVideo(Base):
     
     def __repr__(self):
         return f"<AsanaVideo(asana='{self.asana_name}', premium={self.is_premium})>"
-
-class VideoProcessingQueue(Base):
-    """Очередь обработки видео"""
-    __tablename__ = 'video_processing_queue'
-    
-    id = Column(Integer, primary_key=True)
-    video_path = Column(String(500), nullable=False)
-    status = Column(String(20), default='pending')  # pending, processing, completed, failed
-    asana_name = Column(String(200))
-    
-    # Параметры обработки
-    needs_thumbnail = Column(Boolean, default=True)
-    needs_compression = Column(Boolean, default=False)  # Нужно ли сжать
-    target_resolution = Column(String(20), default='1280x720')
-    
-    # Результаты обработки
-    processed_path = Column(String(500))
-    thumbnail_path = Column(String(500))
-    error_message = Column(Text)
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    processed_at = Column(DateTime)
-    
-    def __repr__(self):
-        return f"<VideoProcessingQueue(status='{self.status}', asana='{self.asana_name}')>"

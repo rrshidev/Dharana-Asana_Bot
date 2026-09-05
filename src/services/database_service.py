@@ -5,22 +5,32 @@ from sqlalchemy.exc import IntegrityError
 from datetime import datetime, date, time
 from typing import Optional, List
 
+from src.config import DATABASE_URL
 from src.models.user import User
+from src.models.subscription_models import UserSubscription
+from src.models.video_models import AsanaVideo
+from src.models.ready_sequence_models import ReadySequence
 
 logger = logging.getLogger(__name__)
 
-# Временная конфигурация БД (позже вынесем в config)
-DATABASE_URL = "sqlite:///bot_data/yoga_bot.db"
-
 class DatabaseService:
-    """Сервис для работы с базой данных пользователей"""
-    
+    """Сервис для работы с базой данных.
+
+    Единая БД с API (в проде PostgreSQL). Схему создаёт API (alembic),
+    здесь — только зеркальные модели для чтения/записи тех же таблиц.
+    """
+
     def __init__(self):
         self.engine = create_engine(DATABASE_URL)
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
-        # Создаем таблицы
-        User.metadata.create_all(bind=self.engine)
+        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=self.engine)
+
+        # Локальная разработка (SQLite): создаём недостающие таблицы.
+        # В проде (PostgreSQL) таблицы уже созданы API — no-op.
+        for base in (User.__table__.metadata,
+                     UserSubscription.__table__.metadata,
+                     AsanaVideo.__table__.metadata,
+                     ReadySequence.__table__.metadata):
+            base.create_all(bind=self.engine)
         logger.info("Database tables created/verified")
     
     def get_session(self) -> Session:
@@ -47,7 +57,7 @@ class DatabaseService:
                 user = User(
                     telegram_id=telegram_id,
                     username=username,
-                    first_name=first_name,
+                    name=first_name,
                     last_name=last_name
                 )
                 session.add(user)
@@ -57,8 +67,8 @@ class DatabaseService:
                 # Обновляем данные если изменились
                 if username and user.username != username:
                     user.username = username
-                if first_name and user.first_name != first_name:
-                    user.first_name = first_name
+                if first_name and user.name != first_name:
+                    user.name = first_name
                 if last_name and user.last_name != last_name:
                     user.last_name = last_name
                 session.commit()
@@ -72,8 +82,25 @@ class DatabaseService:
         finally:
             session.close()
     
-    def update_daily_asana_settings(self, telegram_id: int, enabled: bool = None, 
-                                   asana_time: time = None, timezone: str = None) -> bool:
+    def is_user_premium(self, telegram_id: int) -> bool:
+        """Премиум/триал доступ из ЕДИНОЙ таблицы подписок (общей с API)."""
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.telegram_id == telegram_id).first()
+            if not user:
+                return False
+            subscription = session.query(UserSubscription).filter(
+                UserSubscription.user_id == user.id
+            ).first()
+            return bool(subscription and subscription.has_premium_access())
+        except Exception as e:
+            logger.error(f"Error checking premium for {telegram_id}: {e}")
+            return False
+        finally:
+            session.close()
+
+    def update_daily_asana_settings(self, telegram_id: int, enabled: bool = None,
+                                    asana_time: time = None, timezone: str = None) -> bool:
         """Обновить настройки асаны дня"""
         session = self.get_session()
         try:

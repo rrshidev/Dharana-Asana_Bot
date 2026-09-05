@@ -295,9 +295,6 @@ class AdminHandlers:
             logger.error(f"set_premium error: {e}")
             return await message.reply("Не удалось выполнить операцию. Внутренняя ошибка.")
 
-        if self.subscription_service is not None:
-            self.subscription_service.clear_api_cache()
-
         if grant:
             end = str(data.get("subscription_end"))[:10]
             await message.reply(

@@ -110,7 +110,8 @@ class DailyAsanaScheduler:
             text += content + "\n\n"
         
         # Премиум-подсказки в зависимости от сложности
-        if asana.difficulty >= 4 and not user.is_premium:
+        premium_user = db_service.is_user_premium(user.telegram_id)
+        if asana.difficulty >= 4 and not premium_user:
             text += (
                 "💡 **Это сложная асана!**\n"
                 "В премиум-версии есть:\n"
@@ -119,7 +120,7 @@ class DailyAsanaScheduler:
                 "• ⚠️ Безопасные альтернативы\n\n"
                 "Хотите освоить эту асану безопасно?"
             )
-        elif asana.difficulty >= 3 and not user.is_premium:
+        elif asana.difficulty >= 3 and not premium_user:
             text += (
                 "💡 **Хотите глубже изучить эту асану?**\n"
                 "В премиум-версии есть:\n"

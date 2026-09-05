@@ -21,11 +21,11 @@ class SubscriptionStatus(Enum):
     TRIAL = "trial"
 
 class UserSubscription(Base):
-    """Модель подписки пользователя"""
-    __tablename__ = 'user_subscriptions'
+    """Подписка пользователя в ЕДИНОЙ таблице app_user_subscriptions (общая с API PostgreSQL)."""
+    __tablename__ = 'app_user_subscriptions'
     
     id = Column(Integer, primary_key=True)
-    telegram_id = Column(Integer, unique=True, nullable=False, index=True)
+    user_id = Column(Integer, unique=True, nullable=False, index=True)
     
     # Статус подписки
     is_premium = Column(Boolean, default=False)
@@ -51,7 +51,7 @@ class UserSubscription(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def __repr__(self):
-        return f"<UserSubscription(telegram_id={self.telegram_id}, is_premium={self.is_premium})>"
+        return f"<UserSubscription(user_id={self.user_id}, is_premium={self.is_premium})>"
     
     def is_subscription_active(self) -> bool:
         """Проверяет активна ли подписка"""

@@ -344,8 +344,6 @@ class PaymentHandlers:
             return
 
         data = resp.json()
-        if self.subscription_service is not None:
-            self.subscription_service.clear_api_cache()
         await self.bot.answer_callback_query(
             callback_query.id,
             text="Подтверждено ✅" if status == "confirmed" else "Отклонено ❌",
