@@ -16,6 +16,7 @@ class KeyboardService:
             [InlineKeyboardButton(text=t(lang, 'btn_timer'), callback_data='timer_main')],
             [InlineKeyboardButton(text=t(lang, 'btn_random_asana'), callback_data='random_asana')],
             [InlineKeyboardButton(text=t(lang, 'btn_premium'), callback_data='subscription_plans')],
+            [InlineKeyboardButton(text=t(lang, 'btn_language'), callback_data='lang_menu')],
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 

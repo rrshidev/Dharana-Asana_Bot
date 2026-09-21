@@ -138,3 +138,12 @@ class CommandHandlers:
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=self.keyboard_service.create_main_menu(lang),
         )
+
+    async def language_command(self, message: types.Message):
+        """Обработчик команды /language — меню выбора языка"""
+        lang = self._lang(message)
+        await message.reply(
+            t(lang, 'lang_menu_title'),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_language_menu(lang),
+        )
