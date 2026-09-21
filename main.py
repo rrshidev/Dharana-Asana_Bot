@@ -14,6 +14,11 @@ from config import Token
 from src.handlers.command_handlers import CommandHandlers
 from src.handlers.callback_handlers import CallbackHandlers
 from src.handlers.message_handlers import MessageHandlers
+from src.handlers.daily_asana_handlers import DailyAsanaHandlers
+from src.handlers.ready_sequence_handlers import ReadySequenceHandlers
+from src.handlers.admin_handlers import AdminHandlers
+from src.handlers.payment_handlers import PaymentHandlers
+from src.services.database_service import db_service
 
 
 # Настройка логирования
@@ -31,10 +36,38 @@ class YogaBot:
         self.bot = Bot(token=token)
         self.dp = Dispatcher()
         
+        # Инициализация сервисов
+        from src.services.data_service import DataService
+        from src.services.subscription_service import SubscriptionService
+        
+        data_service = DataService()
+        subscription_service = SubscriptionService(db_service)
+        
         # Инициализация обработчиков
         self.command_handlers = CommandHandlers(self.bot)
         self.callback_handlers = CallbackHandlers(self.bot)
         self.message_handlers = MessageHandlers(self.bot)
+        self.ready_sequence_handlers = ReadySequenceHandlers(self.bot, subscription_service)
+        
+        # Инициализация асаны дня
+        self.daily_asana_handlers = DailyAsanaHandlers(self.bot, data_service)
+        
+        # Инициализация генератора последовательностей
+        from src.handlers.sequence_handlers import SequenceHandlers
+        self.sequence_handlers = SequenceHandlers(self.bot, data_service, subscription_service)
+        
+        # Инициализация обработчиков подписок
+        from src.handlers.subscription_handlers import SubscriptionHandlers
+        self.subscription_handlers = SubscriptionHandlers(self.bot, subscription_service)
+        
+        # Инициализация админ-обработчиков
+        self.admin_handlers = AdminHandlers(self.bot, subscription_service)
+
+        # Инициализация обработчиков оплаты
+        self.payment_handlers = PaymentHandlers(self.bot, subscription_service)
+        
+        # Передаем обработчики в callback_handlers
+        self.callback_handlers.daily_asana_handlers = self.daily_asana_handlers
         
         # Регистрация обработчиков сразу в конструкторе
         self._register_handlers()
@@ -49,6 +82,23 @@ class YogaBot:
         self.dp.message(Command('what'))(self.command_handlers.what_command)
         self.dp.message(Command('info'))(self.command_handlers.info_command)
         self.dp.message(Command('about_us'))(self.command_handlers.about_us_command)
+        self.dp.message(Command('asana_day'))(self.daily_asana_handlers.daily_asana_command)
+        # Админ-команды
+        self.dp.message(Command('adm_hlp'))(self.admin_handlers.adm_hlp)
+        self.dp.message(Command('adm_stats'))(self.admin_handlers.adm_stats)
+        self.dp.message(Command('adm_users'))(self.admin_handlers.adm_users)
+        self.dp.message(Command('adm_search'))(self.admin_handlers.adm_search)
+        self.dp.message(Command('adm_make'))(self.admin_handlers.adm_make)
+        self.dp.message(Command('adm_unmake'))(self.admin_handlers.adm_unmake)
+        self.dp.message(Command('adm_premium'))(self.admin_handlers.adm_premium)
+        self.dp.message(Command('adm_unpremium'))(self.admin_handlers.adm_unpremium)
+        self.dp.message(Command('adm_broadcast'))(self.admin_handlers.adm_broadcast)
+        self.dp.message(Command('adm_btest'))(self.admin_handlers.adm_btest)
+        self.dp.message(Command('adm_addvideo'))(self.admin_handlers.adm_addvideo)
+        # Видеофайл для добавления готового комплекса (document или video)
+        self.dp.message(F.document | F.video)(self.admin_handlers.handle_video_document)
+        # Оплата Premium
+        self.dp.message(Command('pay'))(self.payment_handlers.pay_command)
         logger.info("Commands registered")
         
         # Callback запросы
@@ -57,6 +107,84 @@ class YogaBot:
         self.dp.callback_query(F.data == 'steps')(self.callback_handlers.steps_callback)
         self.dp.callback_query(F.data == 'random_asana')(self.callback_handlers.random_asana_callback)
         self.dp.callback_query(F.data == 'about')(self.callback_handlers.about_callback)
+        self.dp.callback_query(F.data == 'filter_menu')(self.callback_handlers.filter_menu_callback)
+        self.dp.callback_query(F.data == 'filter_difficulty_menu')(self.callback_handlers.filter_difficulty_menu_callback)
+        self.dp.callback_query(F.data == 'filter_effect_menu')(self.callback_handlers.filter_effect_menu_callback)
+        self.dp.callback_query(F.data == 'filter_reset_all')(self.callback_handlers.filter_reset_all_callback)
+        self.dp.callback_query(F.data == 'daily_asana')(self.callback_handlers.daily_asana_callback)
+        self.dp.callback_query(F.data == 'main_menu')(self.callback_handlers.main_menu_callback)
+        self.dp.callback_query(F.data == 'start_screen')(self.callback_handlers.start_screen_callback)
+        logger.info("Basic callbacks registered")
+        
+        # Асана дня
+        self.dp.callback_query(F.data == 'daily_asana')(self.daily_asana_handlers.daily_asana_settings_callback)
+        self.dp.callback_query(F.data == 'daily_asana_now')(self.daily_asana_handlers.daily_asana_now_callback)
+        self.dp.callback_query(F.data.startswith('daily_time_set_'))(self.daily_asana_handlers.daily_asana_time_callback)
+        self.dp.callback_query(F.data.startswith('daily_welcome_time_'))(self.daily_asana_handlers.daily_welcome_time_callback)
+        self.dp.callback_query(F.data.startswith('premium_upgrade_'))(self.daily_asana_handlers.premium_upgrade_callback)
+        self.dp.callback_query(F.data == 'daily_asana_disable')(self.daily_asana_handlers.daily_asana_disable_callback)
+        self.dp.callback_query(F.data == 'daily_timezone_settings')(self.daily_asana_handlers.daily_timezone_settings_callback)
+        self.dp.callback_query(F.data.startswith('daily_timezone_select_'))(self.daily_asana_handlers.daily_timezone_select_callback)
+        self.dp.callback_query(F.data == 'daily_time_manual')(self.daily_asana_handlers.daily_time_manual_callback)
+        self.dp.callback_query(F.data == 'daily_time_manual_welcome')(self.daily_asana_handlers.daily_time_manual_welcome_callback)
+        self.dp.callback_query(F.data == 'daily_asana_settings')(self.daily_asana_handlers.daily_asana_settings_callback)
+        
+        # Обработчики практики асаны дня (более конкретные паттерны идут ПЕРВЫМИ)
+        self.dp.callback_query(F.data.startswith('daily_practice_rest_back_'))(self.daily_asana_handlers.daily_practice_rest_back_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_work_back_'))(self.daily_asana_handlers.daily_practice_work_back_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_start_'))(self.daily_asana_handlers.daily_practice_start_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_rest_'))(self.daily_asana_handlers.daily_practice_rest_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_work_'))(self.daily_asana_handlers.daily_practice_work_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_custom_'))(self.daily_asana_handlers.daily_practice_callback)
+        self.dp.callback_query(F.data.startswith('daily_practice_'))(self.daily_asana_handlers.daily_practice_callback)
+        
+        # Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)
+        self.dp.message(F.text)(self.handle_text_message)
+        logger.info("Daily asana callbacks registered")
+
+        # Обработчик фото (чек на оплату)
+        self.dp.message(F.photo)(self.payment_handlers.handle_receipt_photo)
+        # Оплата Premium из меню подписки
+        self.dp.callback_query(F.data == 'pay_now')(self.payment_handlers.pay_now_callback)
+        # Подтверждение/отклонение чека админом (под фото)
+        self.dp.callback_query(F.data.startswith('pay_review_'))(self.payment_handlers.review_callback)
+
+        # Генератор последовательностей
+        self.dp.callback_query(F.data == 'sequence_menu')(self.sequence_handlers.sequence_menu_callback)
+        self.dp.callback_query(F.data == 'sequence_difficulty')(self.sequence_handlers.sequence_difficulty_callback)
+        self.dp.callback_query(F.data.startswith('sequence_set_difficulty_'))(self.sequence_handlers.sequence_set_difficulty_callback)
+        self.dp.callback_query(F.data == 'sequence_duration')(self.sequence_handlers.sequence_duration_callback)
+        self.dp.callback_query(F.data.startswith('sequence_set_duration_'))(self.sequence_handlers.sequence_set_duration_callback)
+        self.dp.callback_query(F.data == 'sequence_focus')(self.sequence_handlers.sequence_focus_callback)
+        self.dp.callback_query(F.data.startswith('sequence_set_focus_'))(self.sequence_handlers.sequence_set_focus_callback)
+        self.dp.callback_query(F.data == 'sequence_generate')(self.sequence_handlers.sequence_generate_callback)
+        self.dp.callback_query(F.data == 'sequence_show')(self.sequence_handlers.sequence_show_callback)
+        self.dp.callback_query(F.data == 'sequence_start')(self.sequence_handlers.sequence_start_callback)
+        # Управление практикой
+        self.dp.callback_query(F.data == 'sequence_pause')(self.sequence_handlers.sequence_pause_callback)
+        self.dp.callback_query(F.data == 'sequence_resume')(self.sequence_handlers.sequence_resume_callback)
+        self.dp.callback_query(F.data == 'sequence_skip')(self.sequence_handlers.sequence_skip_callback)
+        self.dp.callback_query(F.data == 'sequence_stop')(self.sequence_handlers.sequence_stop_callback)
+        self.dp.callback_query(F.data == 'sequence_progress')(self.sequence_handlers.sequence_progress_callback)
+        logger.info("Sequence handlers registered")
+        
+        # Подписки
+        self.dp.callback_query(F.data == 'subscription_plans')(self.subscription_handlers.subscription_plans_callback)
+        self.dp.callback_query(F.data == 'subscription_trial')(self.subscription_handlers.subscription_trial_callback)
+        self.dp.callback_query(F.data == 'subscription_features')(self.subscription_handlers.subscription_features_callback)
+        self.dp.callback_query(F.data == 'subscription_monthly')(self.subscription_handlers.subscription_monthly_callback)
+        self.dp.callback_query(F.data == 'subscription_yearly')(self.subscription_handlers.subscription_yearly_callback)
+        self.dp.callback_query(F.data == 'subscription_status')(self.subscription_handlers.subscription_status_callback)
+        # Кнопки оформления подписки из премиум-предложений (асана дня и карточки асан)
+        self.dp.callback_query(F.data == 'premium_buy_monthly')(self.subscription_handlers.subscription_monthly_callback)
+        self.dp.callback_query(F.data == 'premium_buy_yearly')(self.subscription_handlers.subscription_yearly_callback)
+        logger.info("Subscription handlers registered")
+        
+        # Готовые комплексы
+        self.dp.callback_query(F.data == 'ready_sequences')(self.ready_sequence_handlers.show_ready_sequences_menu)
+        self.dp.callback_query(F.data.startswith('ready_sequence_'))(self.ready_sequence_handlers.show_ready_sequence)
+        logger.info("Ready sequence handlers registered")
+        
         self.dp.callback_query(F.data == 'back')(self.callback_handlers.back_callback)
         logger.info("Basic callbacks registered")
         
@@ -111,6 +239,11 @@ class YogaBot:
         # Управление таймером
         self.dp.callback_query(F.data.startswith('timer_'))(self.callback_handlers.timer_handlers.timer_control_callback)
         
+        # Фильтры асан
+        self.dp.callback_query(F.data.startswith('filter_difficulty_'))(self.callback_handlers.filter_handlers.filter_difficulty_callback)
+        self.dp.callback_query(F.data.startswith('filter_effect_'))(self.callback_handlers.filter_handlers.filter_effect_callback)
+        self.dp.callback_query(F.data.startswith('fa_'))(self.callback_handlers.filter_handlers.filtered_asana_callback)
+        
         # Динамические callback запросы
         data = self.callback_handlers.data_service.load_data()
         
@@ -134,17 +267,26 @@ class YogaBot:
         for i, step in enumerate(data.steps):
             self.dp.callback_query(F.data == f'step_{i}')(self.callback_handlers.step_item_callback)
         
-        # Обработчик ручного ввода времени медитации - ставим ПЕРВЫМ
-        self.dp.message()(self.callback_handlers.timer_handlers.handle_meditation_time_input)
-        
-        # Текстовые сообщения
-        self.dp.message()(self.message_handlers.text_message)
-        
+        # Рассылки (broadcast)
+        self.dp.callback_query(F.data.startswith('bc_aud_'))(self.admin_handlers.bc_aud_callback)
+        self.dp.callback_query(F.data.startswith('bc_chan_'))(self.admin_handlers.bc_chan_callback)
+        self.dp.callback_query(F.data == 'bc_send')(self.admin_handlers.bc_send_callback)
+        self.dp.callback_query(F.data == 'bc_abort')(self.admin_handlers.bc_abort_callback)
+
         # Универсальный отладочный обработчик - ставим ПОСЛЕ всех остальных
         logger.info("Registering debug callback handler...")
-        # self.dp.callback_query()(self.debug_callback)  # Временно отключаем
+        self.dp.callback_query()(self.debug_callback)
         logger.info("Debug callback handler registered")
         logger.info("Handler registration completed!")
+    
+    async def debug_callback(self, callback_query: types.CallbackQuery):
+        """Отладочный обработчик для всех остальных callback'ов"""
+        logger.info(f"DEBUG: Unhandled callback received: {callback_query.data}")
+        await self.bot.answer_callback_query(callback_query.id)
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            f"DEBUG: Получен callback: {callback_query.data}\nЭтот callback не обработан."
+        )
     
     async def start(self):
         """Запускает бота"""
@@ -153,7 +295,58 @@ class YogaBot:
         # Запускаем фоновую задачу обновления таймеров
         asyncio.create_task(self.callback_handlers.timer_handlers.start_timer_update_loop())
         
+        # Запускаем планировщик асаны дня
+        asyncio.create_task(self.daily_asana_handlers.start_scheduler())
+
+        # Запускаем обработчик подтверждений оплаты
+        asyncio.create_task(self.payment_handlers.confirmations_loop())
+
+        # Запускаем обработчик новых чеков (отправка фото + кнопок админу)
+        asyncio.create_task(self.payment_handlers.pending_review_loop())
+
+        # Запускаем обработчик отклонений оплаты (сообщение клиенту)
+        asyncio.create_task(self.payment_handlers.rejections_loop())
+
+        # Запускаем доставку Telegram-рассылок
+        asyncio.create_task(self.admin_handlers.broadcast_loop())
+
         await self.dp.start_polling(self.bot, skip_updates=True)
+
+    async def handle_text_message(self, message: types.Message):
+        """Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)"""
+        user_id = message.from_user.id
+        text = message.text.strip()
+        
+        # Сначала проверяем, ожидаем ли мы ввод времени
+        if hasattr(self.daily_asana_handlers, 'waiting_for_time_input') and \
+           self.daily_asana_handlers.waiting_for_time_input == user_id:
+            await self.daily_asana_handlers.handle_time_input(message)
+            return
+        
+        # Проверяем, является ли текст числом (для таймера медитации)
+        if text.isdigit():
+            await self.callback_handlers.timer_handlers.handle_meditation_time_input(message)
+            return
+        
+        # Проверяем, является ли текст временем в формате ЧЧ:ММ
+        if ':' in text:
+            parts = text.split(':')
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                # Проверяем, что это валидное время
+                try:
+                    hour = int(parts[0])
+                    minute = int(parts[1])
+                    if 0 <= hour <= 23 and 0 <= minute <= 59:
+                        # Если ожидается ввод времени, отправляем в обработчик времени
+                        if hasattr(self.daily_asana_handlers, 'waiting_for_time_input') and \
+                           self.daily_asana_handlers.waiting_for_time_input == user_id:
+                            await self.daily_asana_handlers.handle_time_input(message)
+                            return
+                except ValueError:
+                    pass
+        
+        # Если это не время и не число, ищем асану
+        await self.message_handlers.text_message(message)
 
     async def debug_callback(self, callback_query: types.CallbackQuery):
         """Отладочный обработчик для всех остальных callback'ов"""

@@ -1,10 +1,16 @@
 import logging
 import os
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.input_file import FSInputFile
 
 from src.services.data_service import DataService
+from src.services.filter_service import FilterService
+from src.services.video_service import VideoService
+from src.services.subscription_service import SubscriptionService
+from src.services.database_service import db_service
+from src.handlers.filter_handlers import FilterHandlers
 from src.utils.keyboard_service import KeyboardService
 from src.handlers.timer_handlers import TimerHandlers
 
@@ -17,8 +23,13 @@ class CallbackHandlers:
     def __init__(self, bot):
         self.bot = bot
         self.data_service = DataService()
+        self.filter_service = FilterService(self.data_service)
+        self.video_service = VideoService(db_service)
+        self.subscription_service = SubscriptionService(db_service)
         self.keyboard_service = KeyboardService()
+        self.filter_handlers = FilterHandlers(bot, self.data_service)
         self.timer_handlers = TimerHandlers(bot, self.data_service, self.keyboard_service)
+        self.daily_asana_handlers = None  # Установится позже
     
     async def catalog_callback(self, callback_query: types.CallbackQuery):
         """Обработчик открытия каталога"""
@@ -64,6 +75,13 @@ class CallbackHandlers:
         global_asana_index = self.data_service.get_category_global_start_index(category_name)
         for i, asana in enumerate(category.asanas):
             await self._send_asana_with_thumbnail(callback_query.from_user.id, asana, category_name, global_asana_index + i)
+        
+        # Сообщение с возвратом в каталог
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            '🔙 Вернуться к выбору раздела:',
+            reply_markup=self.keyboard_service.create_back_to_catalog_menu()
+        )
     
     async def asana_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора асаны"""
@@ -115,6 +133,9 @@ class CallbackHandlers:
         
         data = self.data_service.load_data()
         keyboard = self.keyboard_service.create_simple_menu(data.basics, 'basic')
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')]
+        )
         
         await self.bot.send_message(
             callback_query.from_user.id,
@@ -159,6 +180,9 @@ class CallbackHandlers:
         
         data = self.data_service.load_data()
         keyboard = self.keyboard_service.create_simple_menu(data.steps, 'step')
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')]
+        )
         
         await self.bot.send_message(
             callback_query.from_user.id,
@@ -231,13 +255,80 @@ class CallbackHandlers:
             )
     
     async def _send_asana_full(self, user_id: int, asana_data, message=None):
-        """Отправляет полное описание асаны с фото"""
+        """Отправляет полное описание асаны с фото или видео"""
         try:
-            await self.bot.send_message(user_id, asana_data.description)
+            # Проверяем статус подписки пользователя
+            subscription_info = await self.subscription_service.get_subscription_info(user_id)
+            is_premium = subscription_info['is_active']
             
-            if asana_data.image_path and os.path.exists(asana_data.image_path):
-                await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+            # Ищем видео для этой асаны
+            video = self.video_service.get_video_for_asana(asana_data.name, is_premium)
             
+            # Отладочная информация
+            logger.info(f"Callback User {user_id}: is_premium={is_premium}, video_found={video is not None}")
+            if video:
+                logger.info(f"Callback Video info: is_premium={video['is_premium']}, video_path={video['video_path']}")
+            
+            # Формируем текст с информацией о доступности
+            status_text = ""
+            if video and video['is_premium'] and is_premium:
+                status_text = "🎥 **Видео-инструкция доступна**\n\n"
+            elif video and video['is_premium'] and not is_premium:
+                status_text = "🎥 **Видео-инструкция доступна в премиум-версии**\n\n"
+            
+            # Отправляем описание
+            full_text = status_text + asana_data.description
+            await self.bot.send_message(user_id, full_text, parse_mode=ParseMode.MARKDOWN)
+            
+            # Отправляем видео или фото
+            if video and video['is_premium'] and is_premium:
+                # Премиум-пользователь получает видео
+                if video['video_path'] and os.path.exists(video['video_path']):
+                    try:
+                        await self.bot.send_video(user_id, FSInputFile(video['video_path']))
+                        logger.info(f"Sent video for asana {asana_data.name} to premium user {user_id}")
+                    except Exception as e:
+                        logger.error(f"Error sending video: {e}")
+                        # Если видео не отправилось, отправляем фото
+                        if asana_data.image_path and os.path.exists(asana_data.image_path):
+                            await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+                else:
+                    # Видео файла нет, отправляем фото
+                    if asana_data.image_path and os.path.exists(asana_data.image_path):
+                        await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+                        
+            elif video and video['is_premium'] and not is_premium:
+                # Бесплатный пользователь видит превью видео и предложение подписки
+                logger.info(f"Callback: Showing subscription offer to user {user_id}")
+                
+                if asana_data.image_path and os.path.exists(asana_data.image_path):
+                    await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+                
+                # Добавляем предложение подписки
+                premium_text = (
+                    "🎯 **Хотите видео-инструкцию?**\n\n"
+                    "В премиум-версии вы получите:\n"
+                    "• 🎥 Детальные видео для 50+ асан\n"
+                    "• 📊 Анализ техники и исправление ошибок\n"
+                    "• 🎵 Аудио-сопровождение практик\n"
+                    "• 🔄 Безлимитные генерации комплексов\n\n"
+                    "Попробуйте 7 дней бесплатно!"
+                )
+                
+                premium_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🚀 7 дней бесплатно", callback_data="subscription_trial")],
+                    [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
+                ])
+                
+                await self.bot.send_message(user_id, premium_text, parse_mode=ParseMode.MARKDOWN, reply_markup=premium_keyboard)
+                
+            else:
+                # Видео нет, отправляем фото как обычно
+                logger.info(f"Callback: No video found for asana {asana_data.name}, sending photo only")
+                if asana_data.image_path and os.path.exists(asana_data.image_path):
+                    await self.bot.send_photo(user_id, FSInputFile(asana_data.image_path))
+            
+            # Кнопка возврата
             if message:
                 await message.reply('Каталог', reply_markup=self.keyboard_service.create_main_menu())
             else:
@@ -246,6 +337,7 @@ class CallbackHandlers:
                     text='Каталог', 
                     reply_markup=self.keyboard_service.create_main_menu()
                 )
+                
         except Exception as e:
             logger.error(f"Error sending asana {asana_data.name}: {e}")
             await self.bot.send_message(
@@ -291,6 +383,7 @@ class CallbackHandlers:
             '🧘 Основы йоги - базовые понятия и термины\n'
             '📈 Ступени йоги - 8 уровней практики\n'
             '🎲 Случайная асана - случайная поза для практики\n'
+            '🔍 Фильтры асан - подбор по сложности и эффектам\n'
             '🕐 Таймер - многофункциональный таймер для практики:\n'
             '   • 🧘 Медитация - 1-60 минут\n'
             '   • 🧘‍♂️ Асана - настраиваемые циклы работы/отдыха\n'
@@ -298,6 +391,99 @@ class CallbackHandlers:
             'Создан с любовью к йоге 🙏',
             reply_markup=self.keyboard_service.create_main_menu()
         )
+
+    
+    async def filter_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик меню фильтров"""
+        await self.filter_handlers.show_filter_menu_callback(callback_query)
+    
+    async def filter_difficulty_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик меню фильтра сложности"""
+        await self.filter_handlers.show_difficulty_filter_menu(callback_query)
+    
+    async def filter_effect_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик меню фильтра эффектов"""
+        await self.filter_handlers.show_effect_filter_menu(callback_query)
+    
+    async def main_menu_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик возврата в главное меню"""
+        await self.show_main_menu(callback_query.from_user.id, callback_query.message.message_id)
+
+    async def start_screen_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик возврата на главный экран (быстрые действия)"""
+        await self.show_start_screen(callback_query.from_user.id, callback_query.message.message_id)
+
+    async def show_main_menu(self, user_id: int, message_id: int = None):
+        """Показать главное меню (все разделы)"""
+        from src.utils.keyboard_service import KeyboardService
+        keyboard_service = KeyboardService()
+
+        main_menu_text = (
+            "🧘‍♂️ **Каталог и разделы**\n\n"
+            "Здесь всё, что поможет в практике. Выбери раздел:"
+        )
+
+        keyboard = keyboard_service.create_main_menu()
+
+        if message_id:
+            await self.bot.edit_message_text(
+                chat_id=user_id,
+                message_id=message_id,
+                text=main_menu_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=keyboard
+            )
+        else:
+            await self.bot.send_message(
+                chat_id=user_id,
+                text=main_menu_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=keyboard
+            )
+
+    async def show_start_screen(self, user_id: int, message_id: int = None):
+        """Показать главный экран (быстрые действия)"""
+        from src.utils.keyboard_service import KeyboardService
+        keyboard_service = KeyboardService()
+
+        start_screen_text = (
+            "🏠 **Главный экран**\n\n"
+            "Быстрые действия — в один клик:"
+        )
+
+        keyboard = keyboard_service.create_start_menu()
+
+        if message_id:
+            await self.bot.edit_message_text(
+                chat_id=user_id,
+                message_id=message_id,
+                text=start_screen_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=keyboard
+            )
+        else:
+            await self.bot.send_message(
+                chat_id=user_id,
+                text=start_screen_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=keyboard
+            )
+    
+    async def filter_difficulty_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик выбора фильтра сложности"""
+        await self.filter_handlers.filter_reset_all_callback(callback_query)
+    
+    async def filter_effect_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик выбора фильтра эффектов"""
+        await self.filter_handlers.filter_effect_callback(callback_query)
+    
+    async def filter_reset_all_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик сброса всех фильтров"""
+        await self.filter_handlers.reset_all_filters(callback_query)
+    
+    async def daily_asana_callback(self, callback_query: types.CallbackQuery):
+        """Обработчик асаны дня из главного меню"""
+        await self.daily_asana_handlers.daily_asana_command_from_callback(callback_query)
     
     async def _send_long_text_with_image(self, user_id: int, text: str, image_path: str, title: str):
         """Отправляет длинный текст с изображением"""

@@ -6,6 +6,7 @@ from os.path import exists, join, isfile
 from typing import List, Dict, Optional
 
 from src.models.data_models import AsanaData, CategoryData, BotData
+from src.data.asana_effects import ASANA_EFFECTS, ASANA_DIFFICULTY, ASANA_CONTRAINDICATIONS
 
 logger = logging.getLogger(__name__)
 
@@ -76,13 +77,19 @@ class DataService:
         if not exists(category_path):
             return []
         
-        file_list = [
-            os.path.splitext(item)[0] 
-            for item in listdir(category_path) 
-            if isfile(join(category_path, item))
-        ]
+        file_list = []
+        for item in listdir(category_path):
+            if not isfile(join(category_path, item)):
+                continue
+            # Локализованные файлы "<имя>.en.txt/.jpg/.png" — контент ТОЙ ЖЕ асаны,
+            # а не отдельная асана. Иначе в каталог попадают фейковые имена с ".en",
+            # и «Асана дня» присылает английский контент без картинки.
+            stem = os.path.splitext(item)[0]
+            if stem.lower().endswith('.en'):
+                continue
+            file_list.append(stem)
         
-        # Удаляем дубликаты и сортируем
+        # Удаляем дубликаты только в пределах категории и сортируем
         return sorted(list(set(file_list)))
     
     def _load_basics(self) -> List[str]:
@@ -209,6 +216,69 @@ class DataService:
         
         return content, image_path
     
+    def get_asana_content(self, asana_name: str) -> tuple[str, Optional[str]]:
+        """Получает контент и изображение для асаны"""
+        data = self.load_data()
+        
+        # Ищем асану во всех категорориях
+        for category_name, category in data.categories.items():
+            if asana_name in category.asanas:
+                category_path = join(self.catalog_dir, category_name)
+                logger.info(f"Looking for asana '{asana_name}' in category '{category_name}'")
+                
+                # Ищем txt файл
+                txt_path = None
+                png_path = None
+                jpg_path = None
+                
+                try:
+                    files = os.listdir(category_path)
+                    logger.info(f"Files in category: {files[:10]}...")  # Показываем первые 10 файлов
+                    
+                    for item in files:
+                        item_name = os.path.splitext(item)[0]  # Получаем имя без расширения
+                        if item_name == asana_name:
+                            if item.endswith('.txt'):
+                                txt_path = join(category_path, item)
+                                logger.info(f"Found txt: {item}")
+                            elif item.endswith('.png'):
+                                png_path = join(category_path, item)
+                                logger.info(f"Found png: {item}")
+                            elif item.endswith('.jpg'):
+                                jpg_path = join(category_path, item)
+                                logger.info(f"Found jpg: {item}")
+                except Exception as e:
+                    logger.error(f"Error listing files in {category_path}: {e}")
+                
+                content = ""
+                if txt_path and exists(txt_path):
+                    try:
+                        with open(txt_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            logger.info(f"Successfully read {len(content)} characters from {txt_path}")
+                    except Exception as e:
+                        logger.error(f"Error reading {txt_path}: {e}")
+                else:
+                    logger.warning(f"Txt file not found for: '{asana_name}' (tried: {txt_path})")
+                    logger.info(f"Available txt files in {category_path}: {[f for f in files if f.endswith('.txt')]}")
+                
+                image_path = None
+                logger.info(f"Image paths found - JPG: {jpg_path}, PNG: {png_path}")
+                
+                if jpg_path and exists(jpg_path):
+                    image_path = jpg_path
+                    logger.info(f"✅ Using JPG image: {jpg_path}")
+                elif png_path and exists(png_path):
+                    image_path = png_path
+                    logger.info(f"⚠️ Using PNG image (no JPG found): {png_path}")
+                else:
+                    logger.warning(f"❌ No image found for: '{asana_name}'")
+                
+                return content, image_path
+        
+        logger.warning(f"Asana '{asana_name}' not found in any category")
+        return "", None
+    
     def get_step_content(self, step_name: str) -> str:
         """Получает контент для ступени йоги"""
         # Ищем файл, который заканчивается на step_name (для поддержки файлов с номерами)
@@ -282,3 +352,47 @@ class DataService:
                 self._step_mapping[f'step_{i}'] = step
         
         return self._step_mapping.get(step_id)
+    
+    def get_all_asanas(self) -> List[AsanaData]:
+        """Получить все асаны в виде объектов AsanaData с реальными данными"""
+        data = self.load_data()
+        all_asanas = []
+        
+        # Собираем все реальные асаны с файлами
+        real_asanas = set()
+        for category_name, category in data.categories.items():
+            for asana_name in category.asanas:
+                real_asanas.add(asana_name)
+        
+        # Добавляем только те асаны из ASANA_EFFECTS, у которых есть файлы
+        for asana_name, effects in ASANA_EFFECTS.items():
+            if asana_name in real_asanas:
+                # Ищем категорию для асаны
+                category_name = None
+                for cat_name, category in data.categories.items():
+                    if asana_name in category.asanas:
+                        category_name = cat_name
+                        break
+                
+                # Если категория не найдена, все равно добавляем асану
+                if not category_name:
+                    category_name = "unknown"
+                
+                # Создаем объект AsanaData с реальными параметрами
+                asana_data = AsanaData(
+                    name=asana_name,
+                    description="",  # Будет загружено при необходимости
+                    image_path="",   # Будет загружено при необходимости
+                    category=category_name,
+                    difficulty=ASANA_DIFFICULTY.get(asana_name, 1),  # По умолчанию начальный уровень
+                    effects=effects,     # Реальные эффекты из ASANA_EFFECTS
+                    contraindications=ASANA_CONTRAINDICATIONS.get(asana_name, [])  # Реальные противопоказания
+                )
+                all_asanas.append(asana_data)
+        
+        # Отладочная информация
+        logger.info(f"Loaded {len(all_asanas)} asanas with files from ASANA_EFFECTS")
+        logger.info(f"Sample asana names: {[a.name for a in all_asanas[:5]]}")
+        logger.info(f"Real asanas with files: {len(real_asanas)}")
+        
+        return all_asanas

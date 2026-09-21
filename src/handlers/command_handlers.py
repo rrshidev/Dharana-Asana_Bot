@@ -1,10 +1,15 @@
 import logging
+import os
+import httpx
 from aiogram import types
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 
 from src.utils.keyboard_service import KeyboardService
 
 logger = logging.getLogger(__name__)
+
+API_URL = os.getenv("API_URL", "http://dharana-api:8000")
 
 
 class CommandHandlers:
@@ -16,14 +21,77 @@ class CommandHandlers:
     
     async def start_command(self, message: types.Message):
         """Обработчик команды /start"""
+        text = message.text or ""
+        payload = text.split(" ", 1)[1] if " " in text else ""
+        telegram_id = message.from_user.id
+        name = message.from_user.first_name or ""
+        username = message.from_user.username or ""
+        display_name = name or username or ""
+
+        # Always register/sync user in DB
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{API_URL}/api/v1/auth/telegram/create-code",
+                    json={
+                        "telegram_id": telegram_id,
+                        "name": name,
+                        "username": username,
+                    },
+                    timeout=10,
+                )
+        except Exception as e:
+            logger.error(f"Error registering user: {e}")
+
+        if payload == "auth":
+            # Show the code for app login
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        f"{API_URL}/api/v1/auth/telegram/create-code",
+                        json={
+                            "telegram_id": telegram_id,
+                            "name": name,
+                            "username": username,
+                        },
+                        timeout=10,
+                    )
+                    if resp.status_code == 200:
+                        code = resp.json()["code"]
+                        await message.reply(
+                            f"🔐 Код для входа в приложение Dharana:\n\n"
+                            f"`{code}`\n\n"
+                            f"Введите этот код в приложении для завершения регистрации.",
+                            parse_mode=ParseMode.MARKDOWN,
+                        )
+                        return
+                    else:
+                        logger.error(f"Failed to create telegram code: {resp.text}")
+            except Exception as e:
+                logger.error(f"Error creating telegram code: {e}")
+
+            await message.reply(
+                "Произошла ошибка. Попробуйте позже.",
+            )
+            return
+
+        greeting = f"Намаскар, {display_name}! 🙏" if display_name else "Намаскар! 🙏"
+
+        welcome_text = (
+            f"{greeting}\n\n"
+            "Добро пожаловать в **Dharana** — твой гид по йоге! 🧘\n\n"
+            "Здесь ты найдёшь:\n"
+            "• **Каталог** — 100+ асан с фото и подробным описанием\n"
+            "• **Готовые комплексы** и **генератор практики** под твои цели\n"
+            "• **Многофункциональный таймер** для медитаций и практики асан\n"
+            "• **Асану дня** — чтобы оставаться в тонусе каждый день\n\n"
+            "Выбери действие ниже и начнём практику!"
+        )
+
         await message.reply(
-            "Намаскар!\n"
-            "Это YogaBot - энциклопедия йогических асан!\n"
-            "Введи название асаны на русском языке, например: бакасана или адхо мукха шванасана!\n\n"
-            "Если не знаешь названий асан, воспользуйся удобным Каталогом асан, "
-            "где все позы классифицированы по разделам.\n\n"
-            "Найди нужное название асаны и нажми на кнопку с ним!",
-            reply_markup=self.keyboard_service.create_main_menu()
+            welcome_text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_start_menu(),
         )
     
     async def help_command(self, message: types.Message):
@@ -44,9 +112,10 @@ class CommandHandlers:
             '----> /help - Помощь и информация о функциях ❓❗️\n'
             '----> /what - Что умеет бот 🤖\n'
             '----> /info - Подробная информация об асанах и таймере ❓❗️\n'
-            '----> /about_us - об авторах и реализаторах проекта'
+            '----> /about\\_us - об авторах и реализаторах проекта\n'
+            '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
         )
-        await message.reply(help_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(help_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
     
     async def what_command(self, message: types.Message):
         """Обработчик команды /what"""
@@ -67,7 +136,7 @@ class CommandHandlers:
             '🌬️ **Пранаяма** - таймер для дыхательных упражнений с индивидуальным временем для каждого упражнения\n\n'
             'Все таймеры имеют удобное управление (пауза, стоп, сброс) и автоматическое обновление прогресса!'
         )
-        await message.reply(what_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(what_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
     
     async def info_command(self, message: types.Message):
         """Обработчик команды /info"""
@@ -100,16 +169,27 @@ class CommandHandlers:
             'Рекомеднуется осваивать этот раздел йоги с опытным наставником. '
             'Обязательно выполняйте разминку перед началом практики.'
         )
-        await message.reply(info_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(info_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
     
     async def about_us_command(self, message: types.Message):
         """Обработчик команды /about_us"""
         about_text = (
-            'Арунодая - старший программист(кодревью, рефакторинг, кодинг, мудрые советы). Йогин! --> @Arun0daya\n\n'
-            'Олег - автор проекта online-школы йоги Dharana.ru, частью которого является этот бот'
-            '(Фото, описание, идеи, маркетинг). Йогин!--> @yogaolleg\n'
-            'www.instagram.com/yogaolleg/\n\n'
-            'Ришидэв - автор бота, идейный вдохновитель проекта online-школы йоги Dharana.ru. '
-            'Младший программист(кодинг, асаны). Йогин! --> @RrshiDev'
+            "🙏 **О проекте и его авторах**\n\n"
+            "Меня зовут **Руслан** — я автор и разработчик бота Dharana. "
+            "Проект родился из давней любви к йоге и желания сделать практику "
+            "доступной каждому: я занимаюсь разработкой, администрированием серверов "
+            "и всем, что помогает боту расти.\n\n"
+            "Немного о пути: раньше я практиковал и преподавал йогу, а в некоторых "
+            "публичных медиа с асанами бота — мои фотографии. То есть этот бот делали "
+            "люди, для которых йога — не просто слова.\n\n"
+            "**Олег** — мой друг и партнёр, йогин. Он создаёт медиа-контент: сейчас "
+            "готовит видео с асанами и готовыми комплексами, а дальше займётся "
+            "развитием, рекламой и продвижением проекта.\n\n"
+            "Два человека. Йога. Немного кода. И желание, чтобы ваша практика была "
+            "регулярной и приносила радость.\n\n"
+            "Хорошей практики! 🙏\n\n"
+            "Связаться с нами:\n"
+            "@RrshiDev · @yogaolleg\n"
+            "instagram.com/yogaolleg/"
         )
-        await message.reply(about_text, reply_markup=self.keyboard_service.create_main_menu())
+        await message.reply(about_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())

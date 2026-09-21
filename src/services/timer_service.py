@@ -38,6 +38,7 @@ class TimerService:
             rest_duration=config.rest_duration,
             cycles=config.cycles,
             current_cycle=1,
+            asana_name=config.asana_name,
             start_time=datetime.now()
         )
         self.active_sessions[user_id] = session
@@ -75,8 +76,8 @@ class TimerService:
             session.total_elapsed += int(pause_duration.total_seconds())
             session.status = TimerStatus.RUNNING
             logger.info(f"Resumed timer for user {user_id} - elapsed: {session.elapsed}s")
-        elif session.status == TimerStatus.STOPPED:
-            # Запускаем заново
+        elif session.status in (TimerStatus.STOPPED, TimerStatus.COMPLETED):
+            # Запускаем заново (в т.ч. после завершения)
             session.elapsed = 0
             session.current_cycle = 1
             session.current_phase = TimerPhase.WORK
@@ -144,11 +145,16 @@ class TimerService:
             # Асаны/пранаяма - проверяем фазы
             if session.current_phase == TimerPhase.WORK:
                 if session.elapsed >= session.work_duration:
-                    # Переход к отдыху
-                    session.current_phase = TimerPhase.REST
-                    session.elapsed = 0
-                    session.start_time = now
-                    logger.info(f"User {user_id} switched to rest phase, cycle {session.current_cycle}")
+                    if session.rest_duration > 0:
+                        # Переход к отдыху
+                        session.current_phase = TimerPhase.REST
+                        session.elapsed = 0
+                        session.start_time = now
+                        logger.info(f"User {user_id} switched to rest phase, cycle {session.current_cycle}")
+                    else:
+                        # Фаза отдыха не предусмотрена — завершаем сразу
+                        session.status = TimerStatus.COMPLETED
+                        logger.info(f"Asana/Pranayama completed for user {user_id}")
             else:  # REST phase
                 if session.elapsed >= session.rest_duration:
                     # Увеличиваем цикл ПОСЛЕ отдыха

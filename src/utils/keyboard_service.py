@@ -8,16 +8,44 @@ class KeyboardService:
     """Сервис для создания клавиатур"""
     
     @staticmethod
-    def create_main_menu() -> InlineKeyboardMarkup:
-        """Создает главное меню бота"""
+    def create_start_menu() -> InlineKeyboardMarkup:
+        """Создает стартовое меню (быстрые действия после /start)"""
         buttons = [
-            [InlineKeyboardButton(text='!Каталог асан!', callback_data='catalog')],
-            [InlineKeyboardButton(text='🧘‍♂️ Основы йоги', callback_data='basics')],
-            [InlineKeyboardButton(text='🧘 8 ступеней йоги', callback_data='steps')],
-            [InlineKeyboardButton(text='🎲 Асана дня, согласно карме', callback_data='random_asana')],
+            [InlineKeyboardButton(text='🏠 Главное меню', callback_data='main_menu')],
             [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
+            [InlineKeyboardButton(text='🎲 Случайная асана', callback_data='random_asana')],
+            [InlineKeyboardButton(text='💎 Премиум-подписка', callback_data='subscription_plans')],
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def create_main_menu() -> InlineKeyboardMarkup:
+        """Создает главное меню бота (всё, кроме быстрых действий)"""
+        buttons = [
+            [InlineKeyboardButton(text='🕐 Таймер', callback_data='timer_main')],
+            [InlineKeyboardButton(text='📚 Каталог асан', callback_data='catalog')],
+            [InlineKeyboardButton(text='🎬 Готовые комплексы', callback_data='ready_sequences')],
+            [InlineKeyboardButton(text='🧘 Основы йоги', callback_data='basics')],
+            [InlineKeyboardButton(text='📈 8 ступеней йоги', callback_data='steps')],
+            [InlineKeyboardButton(text='🌅 Асана дня', callback_data='daily_asana')],
+            [InlineKeyboardButton(text='🏋️‍♂️ Генератор практики', callback_data='sequence_menu')],
+            [InlineKeyboardButton(text='🔍 Фильтры асан', callback_data='filter_menu')],
+            [InlineKeyboardButton(text='🏠 На главный экран', callback_data='start_screen')],
             [InlineKeyboardButton(text='ℹ️ О боте', callback_data='about')],
         ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    @staticmethod
+    def create_ready_sequences_menu(sequences) -> InlineKeyboardMarkup:
+        """Создает меню готовых комплексов"""
+        buttons = []
+        for sequence in sequences:
+            text = sequence['name']
+            callback_data = f'ready_sequence_{sequence["id"]}'
+            buttons.append([InlineKeyboardButton(text=text, callback_data=callback_data)])
+        
+        # Добавляем кнопку возврата
+        buttons.append([InlineKeyboardButton(text='⬅️ Назад', callback_data='main_menu')])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
     @staticmethod
@@ -42,6 +70,9 @@ class KeyboardService:
                     callback_data = category.name
             
             buttons.append([InlineKeyboardButton(text=text, callback_data=callback_data)])
+        
+        # Кнопка возврата в главное меню
+        buttons.append([InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
     @staticmethod
@@ -77,5 +108,19 @@ class KeyboardService:
     def create_back_to_catalog_menu() -> InlineKeyboardMarkup:
         """Создает кнопку возврата в каталог"""
         return InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text='Каталог', callback_data='catalog')]]
+            inline_keyboard=[[InlineKeyboardButton(text='🔙 Назад в каталог', callback_data='catalog')]]
+        )
+    
+    @staticmethod
+    def create_back_to_filters_menu() -> InlineKeyboardMarkup:
+        """Создает кнопку возврата к фильтрам"""
+        return InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text='🔙 Назад к фильтрам', callback_data='filter_menu')]]
+        )
+    
+    @staticmethod
+    def create_back_to_main_menu() -> InlineKeyboardMarkup:
+        """Создает кнопку возврата в главное меню"""
+        return InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text='🔙 В главное меню', callback_data='main_menu')]]
         )
