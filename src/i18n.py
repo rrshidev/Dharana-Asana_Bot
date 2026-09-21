@@ -209,6 +209,8 @@ TRANSLATIONS = {
             '----> /what - Что умеет бот 🤖\n'
             '----> /info - Подробная информация об асанах и таймере ❓❗️\n'
             '----> /about\\_us - об авторах и реализаторах проекта\n'
+            '----> /language 🌐 - сменить язык бота (Русский / English)\n'
+            '----> /asana\\_day 🌅 - Асана дня (получить и настроить)\n'
             '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
         ),
         'what_text': (
@@ -555,6 +557,8 @@ TRANSLATIONS = {
             '----> /what - What the bot can do 🤖\n'
             '----> /info - Detailed info about asanas and the timer ❓❗️\n'
             '----> /about\\_us - about the authors of the project\n'
+            '----> /language 🌐 - change bot language (English / Русский)\n'
+            '----> /asana\\_day 🌅 - Asana of the day (get and configure)\n'
             '----> /pay 💳 - pay for the Premium subscription (details + receipt)'
         ),
         'what_text': (
