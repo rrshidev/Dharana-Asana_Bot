@@ -429,6 +429,14 @@ TRANSLATIONS = {
         'min_unit': 'м',
         'timer_asana_name': '🧘 **Асана**',
         'timer_pranayama_name': '🌬️ **Пранаяма**',
+        'cmd_start': 'Запустить бота и открыть меню',
+        'cmd_help': 'Помощь и список возможностей',
+        'cmd_what': 'Что такое Dharana — о проекте',
+        'cmd_info': 'Информация о боте и подписке',
+        'cmd_about_us': 'Наша команда',
+        'cmd_language': 'Сменить язык бота (Русский / English)',
+        'cmd_asana_day': 'Асана дня — получить и настроить',
+        'cmd_pay': 'Оформить Premium-подписку',
     },
 
     'en': {
@@ -764,5 +772,13 @@ TRANSLATIONS = {
         'min_unit': 'm',
         'timer_asana_name': '🧘 **Asana**',
         'timer_pranayama_name': '🌬️ **Pranayama**',
+        'cmd_start': 'Start the bot and open the menu',
+        'cmd_help': 'Help and list of features',
+        'cmd_what': 'What is Dharana — about the project',
+        'cmd_info': 'About the bot and subscription',
+        'cmd_about_us': 'Our team',
+        'cmd_language': 'Change bot language (English / Русский)',
+        'cmd_asana_day': 'Asana of the day — get and configure',
+        'cmd_pay': 'Get Premium subscription',
     },
 }

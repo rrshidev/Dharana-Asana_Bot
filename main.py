@@ -295,6 +295,8 @@ class YogaBot:
     async def start(self):
         """Запускает бота"""
         logger.info("Starting YogaBot...")
+
+        await self._setup_bot_commands()
         
         # Запускаем фоновую задачу обновления таймеров
         asyncio.create_task(self.callback_handlers.timer_handlers.start_timer_update_loop())
@@ -315,6 +317,30 @@ class YogaBot:
         asyncio.create_task(self.admin_handlers.broadcast_loop())
 
         await self.dp.start_polling(self.bot, skip_updates=True)
+
+    async def _setup_bot_commands(self):
+        """Локализованные описания команд в меню Telegram (по языку клиента)"""
+        from aiogram.types import BotCommand
+        from src.i18n import t
+
+        def build(lang: str):
+            return [
+                BotCommand(command='start', description=t(lang, 'cmd_start')),
+                BotCommand(command='help', description=t(lang, 'cmd_help')),
+                BotCommand(command='what', description=t(lang, 'cmd_what')),
+                BotCommand(command='info', description=t(lang, 'cmd_info')),
+                BotCommand(command='language', description=t(lang, 'cmd_language')),
+                BotCommand(command='asana_day', description=t(lang, 'cmd_asana_day')),
+                BotCommand(command='about_us', description=t(lang, 'cmd_about_us')),
+                BotCommand(command='pay', description=t(lang, 'cmd_pay')),
+            ]
+
+        for lang_code in (None, 'en'):
+            try:
+                await self.bot.set_my_commands(build(lang_code or 'ru'), language_code=lang_code)
+                logger.info(f"Bot commands set for language_code={lang_code}")
+            except Exception as e:
+                logger.error(f"Failed to set bot commands for language_code={lang_code}: {e}")
 
     async def handle_text_message(self, message: types.Message):
         """Обработчик текстовых сообщений (поиск асан, ввод времени, таймер)"""
