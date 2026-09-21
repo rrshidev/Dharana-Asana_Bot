@@ -20,6 +20,9 @@ class DatabaseService:
     здесь — только зеркальные модели для чтения/записи тех же таблиц.
     """
 
+    # Если время асаны дня не задано (NULL после миграции) — используем 09:00.
+    DEFAULT_DAILY_ASANA_TIME = time(9, 0)
+
     def __init__(self):
         self.engine = create_engine(DATABASE_URL)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=self.engine)
@@ -131,9 +134,11 @@ class DatabaseService:
         """Получить пользователей, которым нужно прислать асану дня"""
         session = self.get_session()
         try:
-            # Получаем пользователей с включенными уведомлениями
+            # Получаем пользователей с включенными уведомлениями.
+            # Только Telegram-пользователи: рассылка уходит в личку бота.
             users = session.query(User).filter(
                 User.daily_asana_enabled == True,
+                User.telegram_id.isnot(None),
                 (User.last_daily_asana_date != date.today()) | (User.last_daily_asana_date.is_(None))
             ).all()
             
@@ -145,12 +150,9 @@ class DatabaseService:
                 try:
                     # Здесь нужно будет добавить конвертацию времени с учетом часового пояса
                     # Пока упрощенно - проверяем совпадение часов и минут
-                    user_time = user.daily_asana_time
-                    
-                    if user_time is None:
-                        logger.warning(f"❌ User {user.telegram_id} has daily_asana_enabled=True but daily_asana_time is NULL!")
-                        continue
-                        
+                    # NULL после миграции = не задано → используем дефолт 09:00
+                    user_time = user.daily_asana_time or self.DEFAULT_DAILY_ASANA_TIME
+
                     logger.info(f"User {user.telegram_id}: time={user_time}, current={current_time.time()}")
                     
                     if (user_time.hour == current_time.hour and 
