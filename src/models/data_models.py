@@ -79,6 +79,7 @@ class AsanaData:
     image_path: str
     thumbnail_path: Optional[str] = None
     category: str = ""
+    base_name: Optional[str] = None  # Каноническое (файловое) имя, без локализации
     difficulty: int = AsanaDifficulty.BEGINNER.value
     effects: List[str] = None
     contraindications: List[str] = None

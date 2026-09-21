@@ -7,6 +7,7 @@ from typing import List, Dict, Optional
 
 from src.models.data_models import AsanaData, CategoryData, BotData
 from src.data.asana_effects import ASANA_EFFECTS, ASANA_DIFFICULTY, ASANA_CONTRAINDICATIONS
+from src.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -130,28 +131,75 @@ class DataService:
                 steps.append(name)
         return sorted(list(set(steps)))
     
-    def get_asana_data(self, asana_name: str) -> Optional[AsanaData]:
-        """Получает данные асаны по имени"""
+    def localized_category_name(self, category_name: str, lang: str = 'ru') -> str:
+        """Локализованное название категории."""
+        return t(lang, f'cat_name_{category_name}')
+
+    def localized_category_desc(self, category_name: str, lang: str = 'ru') -> str:
+        """Локализованное описание категории."""
+        return t(lang, f'cat_desc_{category_name}')
+
+    def localized_asana_name(self, asana_name: str, lang: str = 'ru') -> str:
+        """Локализованное имя асаны (для EN берём первую строку <имя>.en.txt)."""
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
+        if lang == 'en':
+            for category in self.load_data().categories.values():
+                if asana_name in category.asanas:
+                    en_path = join(self.catalog_dir, category.name, f"{asana_name}.en.txt")
+                    if exists(en_path):
+                        try:
+                            with open(en_path, 'r', encoding='utf-8') as f:
+                                first_line = f.readline().strip()
+                                if first_line:
+                                    return first_line
+                        except Exception as e:
+                            logger.error(f"Error reading {en_path}: {e}")
+                    break
+        return asana_name
+
+    def get_asana_data(self, asana_name: str, lang: str = 'ru') -> Optional[AsanaData]:
+        """Получает данные асаны по имени (для lang='en' — EN-имена и EN-описание)"""
         data = self.load_data()
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
         
         for category_name, category in data.categories.items():
             if asana_name in category.asanas:
                 txt_path = join(self.catalog_dir, category_name, f"{asana_name}.txt")
+                en_txt_path = join(self.catalog_dir, category_name, f"{asana_name}.en.txt")
                 jpg_path = join(self.catalog_dir, category_name, f"{asana_name}.jpg")
                 png_path = join(self.catalog_dir, category_name, f"{asana_name}.png")
                 
                 description = ""
-                if exists(txt_path):
+                display_name = asana_name
+                if lang == 'en' and exists(en_txt_path):
+                    try:
+                        with open(en_txt_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        lines = content.split('\n', 1)
+                        display_name = lines[0].strip() or asana_name
+                        description = content
+                    except Exception as e:
+                        logger.error(f"Error reading {en_txt_path}: {e}")
+                elif exists(txt_path):
                     try:
                         with open(txt_path, 'r', encoding='utf-8') as f:
                             description = f.read()
                     except Exception as e:
                         logger.error(f"Error reading {txt_path}: {e}")
                 
+                if not description and lang == 'en':
+                    if exists(txt_path):
+                        try:
+                            with open(txt_path, 'r', encoding='utf-8') as f:
+                                description = f.read()
+                        except Exception as e:
+                            logger.error(f"Error reading {txt_path}: {e}")
+                
                 thumbnail_path = png_path if exists(png_path) else None
                 
                 return AsanaData(
-                    name=asana_name,
+                    name=display_name,
+                    base_name=asana_name,
                     description=description,
                     image_path=jpg_path if exists(jpg_path) else "",
                     thumbnail_path=thumbnail_path,
@@ -159,23 +207,45 @@ class DataService:
                 )
         
         return None
-    
-    def get_random_asana(self) -> Optional[AsanaData]:
+
+    def get_random_asana(self, lang: str = 'ru') -> Optional[AsanaData]:
         """Получает случайную асану"""
         import random
-        
+
         data = self.load_data()
         all_asanas = []
-        
+
         for category in data.categories.values():
             all_asanas.extend(category.asanas)
-        
+
         if not all_asanas:
             return None
-        
+
         random_asana_name = random.choice(all_asanas)
-        return self.get_asana_data(random_asana_name)
+        return self.get_asana_data(random_asana_name, lang)
     
+    def find_asana(self, query: str, lang: str = 'ru') -> Optional[AsanaData]:
+        """Поиск асаны: по базовому имени или по локализованному (для EN)."""
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
+        q = query.strip().lower()
+
+        # Сначала по базовому (файловому) имени
+        data = self.load_data()
+        for category in data.categories.values():
+            for asana in category.asanas:
+                if asana.lower() == q:
+                    return self.get_asana_data(asana, lang)
+
+        # EN: пробуем по локализованному имени
+        if lang == 'en':
+            for category in data.categories.values():
+                for asana in category.asanas:
+                    en_name = self.localized_asana_name(asana, 'en').lower()
+                    if en_name == q:
+                        return self.get_asana_data(asana, 'en')
+
+        return None
+
     def get_basic_content(self, basic_name: str) -> tuple[str, Optional[str]]:
         """Получает контент для основы йоги"""
         # Добавим логирование для диагностики

@@ -5,6 +5,8 @@ from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 
+from src.i18n import t, lang_from_telegram
+from src.services.database_service import db_service
 from src.utils.keyboard_service import KeyboardService
 
 logger = logging.getLogger(__name__)
@@ -14,11 +16,16 @@ API_URL = os.getenv("API_URL", "http://dharana-api:8000")
 
 class CommandHandlers:
     """Обработчики команд бота"""
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.keyboard_service = KeyboardService()
-    
+
+    @staticmethod
+    def _lang(message: types.Message) -> str:
+        """Язык пользователя для данного сообщения."""
+        return db_service.get_user_language(message.from_user.id)
+
     async def start_command(self, message: types.Message):
         """Обработчик команды /start"""
         text = message.text or ""
@@ -27,6 +34,7 @@ class CommandHandlers:
         name = message.from_user.first_name or ""
         username = message.from_user.username or ""
         display_name = name or username or ""
+        tg_lang = lang_from_telegram(message.from_user.language_code)
 
         # Always register/sync user in DB
         try:
@@ -37,11 +45,22 @@ class CommandHandlers:
                         "telegram_id": telegram_id,
                         "name": name,
                         "username": username,
+                        "language": tg_lang,
                     },
                     timeout=10,
                 )
         except Exception as e:
             logger.error(f"Error registering user: {e}")
+
+        # Локальное зеркало (язык заполняется только при первом контакте)
+        try:
+            db_service.get_or_create_user(
+                telegram_id, username, name, language=tg_lang
+            )
+        except Exception as e:
+            logger.error(f"Error syncing user in bot DB: {e}")
+
+        lang = db_service.get_user_language(telegram_id)
 
         if payload == "auth":
             # Show the code for app login
@@ -53,15 +72,14 @@ class CommandHandlers:
                             "telegram_id": telegram_id,
                             "name": name,
                             "username": username,
+                            "language": tg_lang,
                         },
                         timeout=10,
                     )
                     if resp.status_code == 200:
                         code = resp.json()["code"]
                         await message.reply(
-                            f"🔐 Код для входа в приложение Dharana:\n\n"
-                            f"`{code}`\n\n"
-                            f"Введите этот код в приложении для завершения регистрации.",
+                            t(lang, 'auth_code_text', code=code),
                             parse_mode=ParseMode.MARKDOWN,
                         )
                         return
@@ -71,125 +89,52 @@ class CommandHandlers:
                 logger.error(f"Error creating telegram code: {e}")
 
             await message.reply(
-                "Произошла ошибка. Попробуйте позже.",
+                t(lang, 'auth_error'),
             )
             return
 
-        greeting = f"Намаскар, {display_name}! 🙏" if display_name else "Намаскар! 🙏"
+        greeting = t(lang, 'start_greeting_named', name=display_name) if display_name else t(lang, 'start_greeting')
 
-        welcome_text = (
-            f"{greeting}\n\n"
-            "Добро пожаловать в **Dharana** — твой гид по йоге! 🧘\n\n"
-            "Здесь ты найдёшь:\n"
-            "• **Каталог** — 100+ асан с фото и подробным описанием\n"
-            "• **Готовые комплексы** и **генератор практики** под твои цели\n"
-            "• **Многофункциональный таймер** для медитаций и практики асан\n"
-            "• **Асану дня** — чтобы оставаться в тонусе каждый день\n\n"
-            "Выбери действие ниже и начнём практику!"
-        )
+        welcome_text = f"{greeting}\n\n{t(lang, 'start_welcome')}"
 
         await message.reply(
             welcome_text,
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=self.keyboard_service.create_start_menu(),
+            reply_markup=self.keyboard_service.create_start_menu(lang),
         )
-    
+
     async def help_command(self, message: types.Message):
         """Обработчик команды /help"""
-        help_text = (
-            'Напиши название асаны и получишь её описание и фото\n\n'
-            'Если не знаешь названий асан, воспользуйся удобным Каталогом асан, '
-            'где все позы классифицированы по разделам. Жми на кнопку с названием '
-            'и получишь полное описание и отстройку асаны. А также качественное фото с ней!\n'
-            'Очисти свою карму, выполнив Асану дня!🧘🤸‍♂️🙏\n\n'
-            '🕐 **НОВЫЙ: ИНТЕГРИРОВАННЫЙ ТАЙМЕР** 🕐\n\n'
-            'Используй встроенный таймер для структурированной практики:\n'
-            '🧘 Медитация - 1-60 минут\n'
-            '🧘‍♂️ Асана - настраиваемые циклы работы/отдыха\n'
-            '🌬️ Пранаяма - индивидуальное время для упражнений\n\n'
-            'Список команд бота:\n\n'
-            '----> /start 🚀 - Активация YogaBot\n'
-            '----> /help - Помощь и информация о функциях ❓❗️\n'
-            '----> /what - Что умеет бот 🤖\n'
-            '----> /info - Подробная информация об асанах и таймере ❓❗️\n'
-            '----> /about\\_us - об авторах и реализаторах проекта\n'
-            '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
+        lang = self._lang(message)
+        await message.reply(
+            t(lang, 'help_text'),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_main_menu(lang),
         )
-        await message.reply(help_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
-    
+
     async def what_command(self, message: types.Message):
         """Обработчик команды /what"""
-        what_text = (
-            '✅Бот содержит более 100 асан йоги.\n\n'
-            'Для их поиска перейди в раздел «!Каталог асан!», выбери интересующий, '
-            'в котором асаны удобно классифицированы, найди в нем нужную из предложенных '
-            'и нажми соответсвующую кнопку🟢\n'
-            'Если знаешь название асаны, то введи его на русском языке, '
-            'например: Бакасана или Адхо мукха шванасана!⌨️\n\n'
-            '✅Бот содержит все основные базовые понятия йоги в разделах '
-            '«Основы йоги» и «8 ступеней йоги». Выбери интересующий раздел, '
-            'найди в нем нужную тему, нажми соответствующую кнопку 🟢 и получи его описание.\n\n'
-            '🕐 **НОВЫЙ ТАЙМЕР ДЛЯ ПРАКТИКИ** 🕐\n\n'
-            'Бот теперь включает многофункциональный таймер для йогических практик:\n\n'
-            '🧘 **Медитация** - таймер для медитативных практик с выбором времени от 1 до 60 минут\n'
-            '🧘‍♂️ **Асана** - таймер для практики асан с настраиваемыми циклами работы и отдыха\n'
-            '🌬️ **Пранаяма** - таймер для дыхательных упражнений с индивидуальным временем для каждого упражнения\n\n'
-            'Все таймеры имеют удобное управление (пауза, стоп, сброс) и автоматическое обновление прогресса!'
+        lang = self._lang(message)
+        await message.reply(
+            t(lang, 'what_text'),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_main_menu(lang),
         )
-        await message.reply(what_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
-    
+
     async def info_command(self, message: types.Message):
         """Обработчик команды /info"""
-        info_text = (
-            'Асана - статичная поза, разработанная древними мудрецами таким образом, '
-            'чтобы оказвать определённое воздествие на разум.\n'
-            'Посредством растягивания-сжимания, скручивания физического тела, '
-            'и используя метод диафрагмального дыхания во время упражнений, '
-            'происходит благоприятное воздействие на эндокринную систему желез '
-            'внутренней секреции человека. Что положительным образом сказывается '
-            'на состоянии психики. И ментального здоровья человека в целом.\n'
-            'Далее оздоровлённая психика и подготовленное тело служат инструментом '
-            'для познания главного объекта в медитации.\n'
-            'Духа. Высшего сознания. Истины. Бога. Творца.\n\n'
-            'Таким образом, асана - не является самостоятельной дисциплиной или отдельной йогой. '
-            'Асана является подготовительной практикой, призванной подготовить разум и тело к медитации.\n\n'
-            '🕐 **ИНТЕГРИРОВАННЫЙ ТАЙМЕР ДЛЯ ПРАКТИКИ** 🕐\n\n'
-            'YogaBot теперь включает встроенный таймер для структурированной практики:\n\n'
-            '🧘 **Медитация**: Фокусированная медитативная практика с таймером от 1 до 60 минут\n'
-            '🧘‍♂️ **Асана**: Практика поз с настраиваемыми циклами работы и отдыха (30с-3м работа, 10с-1м отдых, 3-20 циклов)\n'
-            '🌬️ **Пранаяма**: Дыхательные упражнения с индивидуальной настройкой (1-8 упражнений, 10с-2м каждое, 5с-1м отдых)\n\n'
-            'Особенности таймера:\n'
-            '• Автоматическое обновление прогресса каждые 5 секунд\n'
-            '• Уведомления о смене фаз (работа/отдых)\n'
-            '• Полное управление (пауза, продолжить, стоп, сброс, удаление)\n'
-            '• Визуальный прогресс-бар и счетчик циклов\n'
-            '• Корректный подсчет циклов (увеличение после отдыха)\n\n'
-            'Бот носит информативный характер. Не выполняйте асаны самостоятельно, '
-            'если имеете хронические заболевания, психические отклонения. '
-            'Рекомеднуется осваивать этот раздел йоги с опытным наставником. '
-            'Обязательно выполняйте разминку перед началом практики.'
+        lang = self._lang(message)
+        await message.reply(
+            t(lang, 'info_text'),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_main_menu(lang),
         )
-        await message.reply(info_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())
-    
+
     async def about_us_command(self, message: types.Message):
         """Обработчик команды /about_us"""
-        about_text = (
-            "🙏 **О проекте и его авторах**\n\n"
-            "Меня зовут **Руслан** — я автор и разработчик бота Dharana. "
-            "Проект родился из давней любви к йоге и желания сделать практику "
-            "доступной каждому: я занимаюсь разработкой, администрированием серверов "
-            "и всем, что помогает боту расти.\n\n"
-            "Немного о пути: раньше я практиковал и преподавал йогу, а в некоторых "
-            "публичных медиа с асанами бота — мои фотографии. То есть этот бот делали "
-            "люди, для которых йога — не просто слова.\n\n"
-            "**Олег** — мой друг и партнёр, йогин. Он создаёт медиа-контент: сейчас "
-            "готовит видео с асанами и готовыми комплексами, а дальше займётся "
-            "развитием, рекламой и продвижением проекта.\n\n"
-            "Два человека. Йога. Немного кода. И желание, чтобы ваша практика была "
-            "регулярной и приносила радость.\n\n"
-            "Хорошей практики! 🙏\n\n"
-            "Связаться с нами:\n"
-            "@RrshiDev · @yogaolleg\n"
-            "instagram.com/yogaolleg/"
+        lang = self._lang(message)
+        await message.reply(
+            t(lang, 'about_us_text'),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_main_menu(lang),
         )
-        await message.reply(about_text, parse_mode=ParseMode.MARKDOWN, reply_markup=self.keyboard_service.create_main_menu())

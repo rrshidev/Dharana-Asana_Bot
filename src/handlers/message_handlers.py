@@ -3,6 +3,7 @@ import os
 from aiogram import types
 from aiogram.enums import ParseMode
 
+from src.i18n import t
 from src.services.data_service import DataService
 from src.services.video_service import VideoService
 from src.services.subscription_service import SubscriptionService
@@ -14,55 +15,61 @@ logger = logging.getLogger(__name__)
 
 class MessageHandlers:
     """Обработчики текстовых сообщений"""
-    
+
     def __init__(self, bot):
         self.bot = bot
         self.data_service = DataService()
         self.video_service = VideoService(db_service)
         self.subscription_service = SubscriptionService(db_service)
         self.keyboard_service = KeyboardService()
-    
+
+    @staticmethod
+    def _lang(message: types.Message) -> str:
+        return db_service.get_user_language(message.from_user.id)
+
     async def text_message(self, message: types.Message):
         """Обработчик текстовых сообщений"""
         text = message.text.title()
-        
+
         # Проверяем, является ли текст названием асаны
-        asana_data = self.data_service.get_asana_data(text)
-        
+        lang = self._lang(message)
+        asana_data = self.data_service.find_asana(text, lang)
+
         if asana_data:
-            await self._send_asana_data(message, asana_data)
+            await self._send_asana_data(message, asana_data, lang)
         else:
             await message.answer(
-                'Проверь название или воспользуйся каталогом асан!',
-                reply_markup=self.keyboard_service.create_main_menu()
+                t(lang, 'not_found_prompt'),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
-    
-    async def _send_asana_data(self, message: types.Message, asana_data):
+
+    async def _send_asana_data(self, message: types.Message, asana_data, lang: str = 'ru'):
         """Отправляет данные асаны с видео или фото"""
         try:
             # Проверяем статус подписки пользователя
             subscription_info = await self.subscription_service.get_subscription_info(message.from_user.id)
             is_premium = subscription_info['is_active']
-            
+
             # Ищем видео для этой асаны
-            video = self.video_service.get_video_for_asana(asana_data.name, is_premium)
-            
+            video_name = asana_data.base_name or asana_data.name
+            video = self.video_service.get_video_for_asana(video_name, is_premium)
+
             # Отладочная информация
             logger.info(f"User {message.from_user.id}: is_premium={is_premium}, video_found={video is not None}")
             if video:
                 logger.info(f"Video info: is_premium={video['is_premium']}, video_path={video['video_path']}")
-            
+
             # Формируем текст с информацией о доступности
             status_text = ""
             if video and video['is_premium'] and is_premium:
-                status_text = "🎥 **Видео-инструкция доступна**\n\n"
+                status_text = t(lang, 'video_available') + "\n\n"
             elif video and video['is_premium'] and not is_premium:
-                status_text = "🎥 **Видео-инструкция доступна в премиум-версии**\n\n"
-            
+                status_text = t(lang, 'video_premium_only') + "\n\n"
+
             # Отправляем описание
             full_text = status_text + asana_data.description
             await self.bot.send_message(message.from_user.id, full_text, parse_mode=ParseMode.MARKDOWN)
-            
+
             # Отправляем видео или фото
             if video and video['is_premium'] and is_premium:
                 # Премиум-пользователь получает видео
@@ -82,47 +89,39 @@ class MessageHandlers:
                     if asana_data.image_path:
                         from aiogram.types.input_file import FSInputFile
                         await self.bot.send_photo(message.from_user.id, FSInputFile(asana_data.image_path))
-                        
+
             elif video and video['is_premium'] and not is_premium:
                 # Бесплатный пользователь видит превью видео и предложение подписки
                 logger.info(f"Showing subscription offer to user {message.from_user.id}")
-                
+
                 if asana_data.image_path:
                     from aiogram.types.input_file import FSInputFile
                     await self.bot.send_photo(message.from_user.id, FSInputFile(asana_data.image_path))
-                
+
                 # Добавляем предложение подписки
-                premium_text = (
-                    "🎯 **Хотите видео-инструкцию?**\n\n"
-                    "В премиум-версии вы получите:\n"
-                    "• 🎥 Детальные видео для 50+ асан\n"
-                    "• 📊 Анализ техники и исправление ошибок\n"
-                    "• 🎵 Аудио-сопровождение практик\n"
-                    "• 🔄 Безлимитные генерации комплексов\n\n"
-                    "Попробуйте 7 дней бесплатно!"
-                )
-                
+                premium_text = t(lang, 'premium_offer')
+
                 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 premium_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🚀 7 дней бесплатно", callback_data="subscription_trial")],
-                    [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
+                    [InlineKeyboardButton(text=t(lang, 'btn_trial'), callback_data="subscription_trial")],
+                    [InlineKeyboardButton(text=t(lang, 'btn_plans'), callback_data="subscription_plans")]
                 ])
-                
+
                 await self.bot.send_message(message.from_user.id, premium_text, parse_mode=ParseMode.MARKDOWN, reply_markup=premium_keyboard)
-                
+
             else:
                 # Видео нет, отправляем фото как обычно
                 logger.info(f"No video found for asana {asana_data.name}, sending photo only")
                 if asana_data.image_path:
                     from aiogram.types.input_file import FSInputFile
                     await self.bot.send_photo(message.from_user.id, FSInputFile(asana_data.image_path))
-            
+
             # Кнопка возврата
-            await message.reply('Каталог', reply_markup=self.keyboard_service.create_main_menu())
-                
+            await message.reply(t(lang, 'catalog_outro'), reply_markup=self.keyboard_service.create_main_menu(lang))
+
         except Exception as e:
             logger.error(f"Error sending asana {asana_data.name}: {e}")
             await message.answer(
-                f'Ошибка при загрузке асаны: {e}',
-                reply_markup=self.keyboard_service.create_main_menu()
+                t(lang, 'asana_error', err=e),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )

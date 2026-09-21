@@ -114,6 +114,9 @@ class YogaBot:
         self.dp.callback_query(F.data == 'daily_asana')(self.callback_handlers.daily_asana_callback)
         self.dp.callback_query(F.data == 'main_menu')(self.callback_handlers.main_menu_callback)
         self.dp.callback_query(F.data == 'start_screen')(self.callback_handlers.start_screen_callback)
+        self.dp.callback_query(F.data == 'lang_menu')(self.callback_handlers.language_menu_callback)
+        self.dp.callback_query(F.data == 'lang_set_ru')(self.callback_handlers.language_set_callback)
+        self.dp.callback_query(F.data == 'lang_set_en')(self.callback_handlers.language_set_callback)
         logger.info("Basic callbacks registered")
         
         # Асана дня

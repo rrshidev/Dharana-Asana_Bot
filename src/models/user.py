@@ -19,6 +19,9 @@ class User(Base):
     daily_asana_time = Column(Time, default=time(9, 0))  # 9:00 по умолчанию
     timezone = Column(String(50), default='UTC')  # Часовой пояс
     last_daily_asana_date = Column(Date, default=None)  # Когда последний раз присылали
+
+    # Язык интерфейса: "ru" | "en" (зеркало колонки app_users.language от API)
+    language = Column(String(5), default='ru')
     
     # Статистика
     total_practices = Column(Integer, default=0)
