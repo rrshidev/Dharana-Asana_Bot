@@ -77,11 +77,17 @@ class DataService:
         if not exists(category_path):
             return []
         
-        file_list = [
-            os.path.splitext(item)[0] 
-            for item in listdir(category_path) 
-            if isfile(join(category_path, item))
-        ]
+        file_list = []
+        for item in listdir(category_path):
+            if not isfile(join(category_path, item)):
+                continue
+            # Локализованные файлы "<имя>.en.txt/.jpg/.png" — контент ТОЙ ЖЕ асаны,
+            # а не отдельная асана. Иначе в каталог попадают фейковые имена с ".en",
+            # и «Асана дня» присылает английский контент без картинки.
+            stem = os.path.splitext(item)[0]
+            if stem.lower().endswith('.en'):
+                continue
+            file_list.append(stem)
         
         # Удаляем дубликаты только в пределах категории и сортируем
         return sorted(list(set(file_list)))
