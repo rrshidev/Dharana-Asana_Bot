@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta, timezone
 from typing import Optional, List
 
 from src.config import DATABASE_URL
@@ -130,37 +130,78 @@ class DatabaseService:
         finally:
             session.close()
     
+    @staticmethod
+    def _parse_timezone_offset(timezone_str: Optional[str]) -> timedelta:
+        """Парсить часовой пояс вида 'UTC', 'UTC+3', 'UTC+3:30', 'UTC-5'.
+
+        dharmana_api хранит пояс строкой вида 'UTC+3' (см. daily_asana_handlers).
+        Возвращает смещение от UTC.
+        """
+        if not timezone_str:
+            return timedelta(0)
+        tz_str = timezone_str.strip().upper()
+        for prefix in ("UTC", "GMT"):
+            if tz_str.startswith(prefix):
+                tz_str = tz_str[len(prefix):].strip()
+                break
+        if not tz_str:
+            return timedelta(0)
+
+        sign = -1 if tz_str.startswith("-") else 1
+        tz_str = tz_str.lstrip("+-")
+        parts = tz_str.split(":")
+        try:
+            hours = int(parts[0])
+            minutes = int(parts[1]) if len(parts) > 1 else 0
+        except ValueError:
+            return timedelta(0)
+        return timedelta(hours=sign * hours, minutes=sign * minutes)
+
     def get_users_for_daily_asana(self, current_time: datetime) -> List[User]:
-        """Получить пользователей, которым нужно прислать асану дня"""
+        """Получить пользователей, которым нужно прислать асану дня.
+
+        current_time интерпретируется как момент в UTC (сервер бота живёт по UTC).
+        Само время daily_asana_time хранится в ЛОКАЛЬНОМ поясе юзера (user.timezone),
+        поэтому тут переводим current_time в локальное время пользователя и
+        сравниваем уже его. Проверка «уже присылали сегодня» тоже локальная.
+        """
         session = self.get_session()
         try:
+            if current_time.tzinfo is None:
+                utc_now = current_time.replace(tzinfo=timezone.utc)
+            else:
+                utc_now = current_time.astimezone(timezone.utc)
+
             # Получаем пользователей с включенными уведомлениями.
             # Только Telegram-пользователи: рассылка уходит в личку бота.
             users = session.query(User).filter(
                 User.daily_asana_enabled == True,
                 User.telegram_id.isnot(None),
-                (User.last_daily_asana_date != date.today()) | (User.last_daily_asana_date.is_(None))
             ).all()
             
             logger.info(f"Found {len(users)} users with enabled notifications")
             
-            # Фильтруем по времени (учитываем часовой пояс)
             target_users = []
             for user in users:
                 try:
-                    # Здесь нужно будет добавить конвертацию времени с учетом часового пояса
-                    # Пока упрощенно - проверяем совпадение часов и минут
+                    offset = self._parse_timezone_offset(user.timezone)
+                    local_now = utc_now + offset
+
+                    # Уже присылали сегодня (по локальному времени юзера)
+                    if user.last_daily_asana_date == local_now.date():
+                        continue
+
                     # NULL после миграции = не задано → используем дефолт 09:00
                     user_time = user.daily_asana_time or self.DEFAULT_DAILY_ASANA_TIME
 
-                    logger.info(f"User {user.telegram_id}: time={user_time}, current={current_time.time()}")
+                    logger.info(f"User {user.telegram_id}: time={user_time}, local_now={local_now.time()}, tz={user.timezone}")
                     
-                    if (user_time.hour == current_time.hour and 
-                        user_time.minute == current_time.minute):
+                    if (user_time.hour == local_now.hour and 
+                        user_time.minute == local_now.minute):
                         target_users.append(user)
                         logger.info(f"✅ User {user.telegram_id} matches time!")
                     else:
-                        logger.info(f"❌ User {user.telegram_id} time mismatch: {user_time.hour}:{user_time.minute} != {current_time.hour}:{current_time.minute}")
+                        logger.info(f"❌ User {user.telegram_id} time mismatch: {user_time.hour}:{user_time.minute} != {local_now.hour}:{local_now.minute}")
                         
                 except Exception as e:
                     logger.error(f"Error checking time for user {user.telegram_id}: {e}")

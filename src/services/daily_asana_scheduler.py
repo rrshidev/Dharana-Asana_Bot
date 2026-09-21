@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import List
 
 from aiogram.enums import ParseMode
@@ -42,7 +42,9 @@ class DailyAsanaScheduler:
     
     async def check_and_send_daily_asanas(self):
         """Проверить и отправить асаны дня"""
-        now = datetime.now()
+        # Сервер живёт по UTC; перевод в локальное время юзеров делает
+        # get_users_for_daily_asana (по user.timezone).
+        now = datetime.now(timezone.utc)
         
         # Получаем пользователей, которым нужно отправить асану
         users = db_service.get_users_for_daily_asana(now)
