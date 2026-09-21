@@ -106,11 +106,8 @@ class DailyAsanaScheduler:
             f"Сложность: {difficulty_text}\n\n"
         )
         
-        # Добавляем описание если есть
+        # Добавляем описание если есть — полное, без обрезки
         if content:
-            # Обрезаем если слишком длинное
-            if len(content) > 500:
-                content = content[:500] + "..."
             text += content + "\n\n"
         
         # Премиум-подсказки в зависимости от сложности
@@ -162,7 +159,10 @@ class DailyAsanaScheduler:
         return {"inline_keyboard": buttons}
     
     async def _send_asana_message(self, user_id: int, text: str, image_path: str, keyboard):
-        """Отправить сообщение с асаной"""
+        """Отправить сообщение с асаной.
+
+        Лимиты Telegram: caption у фото — 1024 символа, сообщение — 4096.
+        """
         try:
             if image_path:
                 from aiogram.types import FSInputFile
@@ -171,32 +171,69 @@ class DailyAsanaScheduler:
                 abs_image_path = os.path.abspath(image_path)
                 if os.path.exists(abs_image_path):
                     input_file = FSInputFile(abs_image_path)
-                    await self.bot.send_photo(
-                        chat_id=user_id,
-                        photo=input_file,
-                        caption=text,
-                        reply_markup=keyboard,
-                        parse_mode=ParseMode.MARKDOWN
-                    )
+                    if len(text) <= 1024:
+                        await self.bot.send_photo(
+                            chat_id=user_id,
+                            photo=input_file,
+                            caption=text,
+                            reply_markup=keyboard,
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                    else:
+                        # Капшн фото ограничен 1024 → картинку отдельно,
+                        # полный текст отдельным сообщением с клавиатурой.
+                        await self.bot.send_photo(chat_id=user_id, photo=input_file)
+                        await self._send_text_chunks(user_id, text, keyboard)
                     return
             
-            # Если нет фото, отправляем текст
-            await self.bot.send_message(
-                chat_id=user_id,
-                text=text,
-                reply_markup=keyboard,
-                parse_mode=ParseMode.MARKDOWN
-            )
+            # Если нет фото (или текст длинноват) — отправляем текст целиком
+            await self._send_text_chunks(user_id, text, keyboard)
             
         except Exception as e:
             logger.error(f"Error sending asana message: {e}")
             # Пробуем отправить просто текст
             try:
-                await self.bot.send_message(
-                    chat_id=user_id,
-                    text=text,
-                    reply_markup=keyboard,
-                    parse_mode=ParseMode.MARKDOWN
-                )
+                await self._send_text_chunks(user_id, text, keyboard)
             except Exception as e2:
                 logger.error(f"Error sending fallback message: {e2}")
+    
+    async def _send_text_chunks(self, chat_id: int, text: str, keyboard, chunk_size: int = 4000):
+        """Отправить длинный текст, разбивая по границам строк (лимит 4096)."""
+        lines = text.split("\n")
+        chunks = []
+        current = ""
+        for line in lines:
+            # Строка-гигант (редкий случай) — режем жёстко
+            if len(line) > chunk_size:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                for i in range(0, len(line), chunk_size):
+                    chunks.append(line[i:i + chunk_size])
+                continue
+            if len(current) + len(line) + 1 > chunk_size:
+                if current:
+                    chunks.append(current)
+                current = line
+            else:
+                current = (current + "\n" if current else "") + line
+        if current:
+            chunks.append(current)
+        
+        if not chunks:
+            return
+        
+        for i, chunk in enumerate(chunks):
+            await self._safe_send_message(chat_id, chunk, keyboard if i == 0 else None)
+    
+    async def _safe_send_message(self, chat_id: int, text: str, keyboard):
+        """Отправить текст с md-парсингом, при ошибке парсинга — без него."""
+        try:
+            await self.bot.send_message(
+                chat_id=chat_id,
+                text=text,
+                reply_markup=keyboard,
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception:
+            await self.bot.send_message(chat_id=chat_id, text=text, reply_markup=keyboard)
