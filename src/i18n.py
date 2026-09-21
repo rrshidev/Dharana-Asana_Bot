@@ -113,7 +113,7 @@ TRANSLATIONS = {
         'start_screen_title': "🏠 **Главный экран**\n\nБыстрые действия — в один клик:",
         'main_menu_title': "🧘‍♂️ **Каталог и разделы**\n\nЗдесь всё, что поможет в практике. Выбери раздел:",
         'lang_menu_title': '🌐 Выбери язык бота:',
-        'lang_changed': 'Язык: {lang}',
+        'lang_changed': '🌐 Язык успешно изменён на {name} ✅',
 
         # --- Каталог ---
         'categories_title': 'Разделы асан:',
@@ -467,7 +467,7 @@ TRANSLATIONS = {
         'start_screen_title': "🏠 **Home screen**\n\nQuick actions — one tap:",
         'main_menu_title': "🧘‍♂️ **Catalog & sections**\n\nEverything to support your practice. Choose a section:",
         'lang_menu_title': '🌐 Choose your language:',
-        'lang_changed': 'Language: {lang}',
+        'lang_changed': '🌐 Language successfully changed to {name} ✅',
 
         'categories_title': 'Asana categories:',
         'category_intro': ('{desc}\n'

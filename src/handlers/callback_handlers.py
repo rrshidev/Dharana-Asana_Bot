@@ -501,7 +501,7 @@ class CallbackHandlers:
         lang_name = 'English' if new_lang == 'en' else 'Русский'
         await self.bot.answer_callback_query(
             callback_query.id,
-            t(new_lang, 'lang_changed', lang=lang_name)
+            t(new_lang, 'lang_changed', name=lang_name)
         )
         await self.show_main_menu(telegram_id, callback_query.message.message_id)
 
