@@ -5,6 +5,7 @@ from typing import List
 
 from aiogram.enums import ParseMode
 
+from src.i18n import t
 from src.services.database_service import db_service
 from src.services.data_service import DataService
 from src.handlers.filter_handlers import FilterHandlers
@@ -73,20 +74,25 @@ class DailyAsanaScheduler:
                 logger.error(f"User {user_id} not found in database")
                 return
             
+            lang = db_service.get_user_language(user_id)
+            
             # Получаем случайную асану
-            daily_asana = self.data_service.get_random_asana()
+            daily_asana = self.data_service.get_random_asana(lang)
             if not daily_asana:
                 logger.error("No asanas found for daily asana")
                 return
             
-            # Получаем контент
-            content, image_path = self.data_service.get_asana_content(daily_asana.name)
+            # Получаем контент (RU — из файла, EN — локализованное описание)
+            base_name = daily_asana.base_name or daily_asana.name
+            content, image_path = self.data_service.get_asana_content(base_name)
+            if lang == 'en' and daily_asana.description:
+                content = daily_asana.description
             if not content:
-                content = f"🧘 **{daily_asana.name}**\n\nОписание временно недоступно."
+                content = f"🧘 **{daily_asana.name}**\n\n{t(lang, 'daily_desc_unavailable')}"
             
             # Форматируем текст
-            asana_text = self._format_daily_asana_text(daily_asana, content, fresh_user)
-            keyboard = self._create_daily_asana_keyboard(daily_asana.name, fresh_user)
+            asana_text = self._format_daily_asana_text(daily_asana, content, fresh_user, lang)
+            keyboard = self._create_daily_asana_keyboard(daily_asana.name, fresh_user, lang)
             
             await self._send_asana_message(fresh_user.telegram_id, asana_text, image_path, keyboard)
             
@@ -96,14 +102,14 @@ class DailyAsanaScheduler:
         except Exception as e:
             logger.error(f"Error sending daily asana to user {user_id}: {e}")
     
-    def _format_daily_asana_text(self, asana, content: str, user) -> str:
+    def _format_daily_asana_text(self, asana, content: str, user, lang: str = 'ru') -> str:
         """Форматирует текст асаны дня с премиум-подсказками"""
         difficulty_text = "⭐" * asana.difficulty
         
         text = (
-            f"🧘‍♂️ **Асана дня**\n\n"
+            f"{t(lang, 'daily_asana_title')}\n\n"
             f"**{asana.name}**\n"
-            f"Сложность: {difficulty_text}\n\n"
+            f"{t(lang, 'daily_difficulty', stars=difficulty_text)}\n\n"
         )
         
         # Добавляем описание если есть — полное, без обрезки
@@ -114,46 +120,36 @@ class DailyAsanaScheduler:
         premium_user = db_service.is_user_premium(user.telegram_id)
         if asana.difficulty >= 4 and not premium_user:
             text += (
-                "💡 **Это сложная асана!**\n"
-                "В премиум-версии есть:\n"
-                "• 📹 Видео с подготовительными упражнениями\n"
-                "• 🔄 Облегченные вариации\n"
-                "• ⚠️ Безопасные альтернативы\n\n"
-                "Хотите освоить эту асану безопасно?"
+                f"{t(lang, 'daily_hint_hard')}\n\n"
+                f"{t(lang, 'daily_hint_hard_cta')}"
             )
         elif asana.difficulty >= 3 and not premium_user:
-            text += (
-                "💡 **Хотите глубже изучить эту асану?**\n"
-                "В премиум-версии есть:\n"
-                "• 📹 Детальная видео-отстройка\n"
-                "• 🏗️ Анатомические схемы\n"
-                "• ❌ Разбор типичных ошибок\n\n"
-            )
+            text += t(lang, 'daily_hint_medium') + "\n\n"
         
-        text += "Хорошей практики! 🙏"
+        text += t(lang, 'daily_good_practice')
         
         return text
     
-    def _create_daily_asana_keyboard(self, asana_name, user):
+    def _create_daily_asana_keyboard(self, asana_name, user, lang: str = 'ru'):
         """Создает клавиатуру для асаны дня"""
         from aiogram.types import InlineKeyboardMarkup
         
         buttons = []
         
         # Основная кнопка - начать практику
-        practice_text = "🕐 Начать практику (5 мин)"
+        practice_text = t(lang, 'daily_start_practice_btn')
         # Используем короткий ID вместо полного имени асаны
         buttons.append([{"text": practice_text, "callback_data": f"daily_practice_{user.id}"}])
         
         # Премиум-предложения для сложных асан (упрощенно, без объекта asana)
         buttons.append([
-            {"text": "📹 Видео-отстройка (премиум)", "callback_data": "premium_upgrade_video"}
+            {"text": t(lang, 'daily_video_premium_btn'), "callback_data": "premium_upgrade_video"}
         ])
         
         # Кнопки управления
         buttons.append([
-            {"text": "⏰ Изменить время", "callback_data": "daily_asana_settings"},
-            {"text": "🔕 Отключить уведомления", "callback_data": "daily_asana_disable"}
+            {"text": t(lang, 'daily_change_time_btn'), "callback_data": "daily_asana_settings"},
+            {"text": t(lang, 'daily_disable_btn'), "callback_data": "daily_asana_disable"}
         ])
         
         return {"inline_keyboard": buttons}

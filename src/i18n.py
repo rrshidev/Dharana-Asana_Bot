@@ -85,6 +85,18 @@ def t_exercises(lang, n: int) -> str:
     return f"{n} упражнений"
 
 
+def format_cycles(lang, n: int) -> str:
+    """'1 цикл'/'3 цикла'/'5 циклов' или '1 cycle'/'5 cycles'."""
+    lang = normalize_lang(lang)
+    if lang == 'en':
+        return f"{n} cycle" if n == 1 else f"{n} cycles"
+    if n == 1:
+        return f"{n} цикл"
+    if n in (2, 3, 4):
+        return f"{n} цикла"
+    return f"{n} циклов"
+
+
 TRANSLATIONS = {
     'ru': {
         # --- Кнопки ---
@@ -439,6 +451,185 @@ TRANSLATIONS = {
         'cmd_language': 'Сменить язык бота (Русский / English)',
         'cmd_asana_day': 'Асана дня — получить и настроить',
         'cmd_pay': 'Оформить Premium-подписку',
+
+        # --- Асана дня ---
+        'daily_settings_title': '⏰ **Настройки асаны дня**',
+        'daily_current_time': 'Текущее время: {time}',
+        'daily_time_zone': 'Часовой пояс: {tz}',
+        'daily_status': 'Статус: {status}',
+        'daily_status_on': '✅ Включено',
+        'daily_status_off': '❌ Выключено',
+        'daily_choose_time': 'Выберите время для получения асаны дня:',
+        'daily_welcome_title': '🌅 **Добро пожаловать в Асану Дня!**',
+        'daily_welcome_intro': 'Это ежедневная практика для вашей йоги:',
+        'daily_welcome_li1': '✅ **Каждый день** новая асана в удобное время',
+        'daily_welcome_li2': '✅ **Автоматические уведомления** - не нужно помнить',
+        'daily_welcome_li3': '✅ **Премиум-подсказки** для сложных асан',
+        'daily_welcome_li4': '✅ **Статистика прогресса** и мотивация',
+        'daily_welcome_choose': '🎯 **Выберите время для ежедневной практики:**',
+        'daily_time_changed': (
+            '✅ Время изменено на {time}\n\n'
+            'Теперь я буду присылать вам асану дня в {time}!\n\n'
+            'Хотите настроить что-то еще?'
+        ),
+        'daily_err_save_time': 'Ошибка при сохранении времени',
+        'daily_saved_ok': '✅ **Отлично! Настройки сохранены**',
+        'daily_saved_time': '⏰ Время: {time}',
+        'daily_notif_on': '📅 Ежедневные уведомления: включены',
+        'daily_first_asana': '🎯 **Ваша первая асана дня:**',
+        'daily_disabled': (
+            '❌ Уведомления асаны дня отключены\n\n'
+            'Вы всегда можете включить их снова в настройках.\n\n'
+            'Хотите посмотреть другие функции?'
+        ),
+        'daily_tz_title': '🌍 **Настройки часового пояса**',
+        'daily_tz_current': 'Текущий часовой пояс: {tz}',
+        'daily_tz_choose': 'Выберите ваш часовой пояс:',
+        'daily_tz_changed': (
+            '✅ Часовой пояс изменен на {tz}\n\n'
+            'Теперь асаны будут приходить с учетом вашего времени.\n\n'
+            'Хотите настроить что-то еще?'
+        ),
+        'daily_err_save_tz': 'Ошибка при сохранении часового пояса',
+        'daily_err_no_last': 'Ошибка: не найдена последняя асана дня',
+        'daily_err_no_asana': 'Ошибка: не найдена асана для сегодня',
+        'daily_practice_title': '🕐 **Практика: {name}**',
+        'daily_practice_work_menu': (
+            "{title}\n\n"
+            "Настройте таймер для вашей практики:\n\n"
+            "⏱️ **Время выполнения асаны** (в секундах)\n"
+            "⏸️ **Время отдыха** (в секундах)\n"
+            "🔄 **Количество циклов** (0 = бесконечно)\n\n"
+            "Выберите время работы:"
+        ),
+        'daily_sec_label': 'сек',
+        'daily_min_label': 'мин',
+        'daily_dur': '{m} мин {s} сек',
+        'daily_enter_custom': '⏰ Указать свое время',
+        'daily_rest_menu': (
+            "{title}\n\n"
+            "Время работы: {work}\n\n"
+            "Выберите время отдыха:"
+        ),
+        'daily_cycles_menu': (
+            "{title}\n\n"
+            "Время работы: {work}\n"
+            "Время отдыха: {rest}\n\n"
+            "Выберите количество циклов:"
+        ),
+        'daily_infinite': 'Бесконечно',
+        'daily_infinite_text': 'бесконечно',
+        'daily_start_body': '🧘 Начинаем практику! Сосредоточьтесь на дыхании.\n\nПервый цикл начался!',
+        'daily_timer_started_title': '🧘‍♂️ **Практика: {name} начата!**',
+        'daily_prem_up_easy': (
+            "🌟 **Откройте облегченные варианты асан!**\n\n"
+            "В премиум-версии вы получите:\n"
+            "• 📹 Видео с подготовительными упражнениями\n"
+            "• 🔄 3 уровня сложности каждой асаны\n"
+            "• 🛡️ Безопасные прогрессии"
+        ),
+        'daily_prem_up_safe': (
+            "🛡️ **Практикуйте безопасно!**\n\n"
+            "В премиум-версии:\n"
+            "• ⚠️ Индивидуальные противопоказания\n"
+            "• 🔄 Безопасные альтернативы сложных асан\n"
+            "• 👨‍⚕️ Рекомендации по модификациям"
+        ),
+        'daily_prem_up_video': (
+            "📹 **Детальная видео-отстройка!**\n\n"
+            "В премиум-версии:\n"
+            "• 🎥 Качественные видео для каждой асаны\n"
+            "• 🏗️ Анатомические 3D-схемы\n"
+            "• ❌ Разбор типичных ошибок"
+        ),
+        'daily_prem_up_general': (
+            "🌟 **Откройте все возможности йоги!**\n\n"
+            "В премиум-версии:\n"
+            "• 📹 Видео-инструкции для всех асан\n"
+            "• 🎯 Генератор персональных комплексов\n"
+            "• 📊 Статистика и прогресс\n"
+            "• 🧘 Готовые программы под цели"
+        ),
+        'daily_prem_up_price': '💰 **399₽/месяц или 2990₽/год**',
+        'daily_prem_up_cta_easy': 'Хотите начать безопасную практику?',
+        'daily_prem_up_cta_safe': 'Ваше здоровье - это инвестиция!',
+        'daily_prem_up_cta_video': 'Изучайте асаны профессионально!',
+        'daily_prem_up_cta_general': 'Начните свой путь в йоге профессионально!',
+        'prem_btn_monthly': '💳 Оформить подписку',
+        'prem_btn_yearly': '💰 Годовая подписка (экономия 25%)',
+        'daily_w_time_0600': '🌅 Раннее утро (6:00)',
+        'daily_w_time_0700': '☀️ Утро (7:00)',
+        'daily_w_time_0800': '🌤️ Завтрак (8:00)',
+        'daily_w_time_0900': '🌞 Начало дня (9:00)',
+        'daily_w_time_1000': '🌅 Перед работой (10:00)',
+        'daily_w_time_1300': '🌤️ Обед (13:00)',
+        'daily_w_time_1800': '🌆 После работы (18:00)',
+        'daily_w_time_2000': '🌙 Вечер (20:00)',
+        'daily_w_time_2100': '🌛 Перед сном (21:00)',
+        'daily_s_time_0700': '☀️ Утро (7:00)',
+        'daily_s_time_0800': '🌤️ Раннее утро (8:00)',
+        'daily_s_time_0900': '🌞 Начало дня (9:00)',
+        'daily_s_time_1000': '🌅 Перед работой (10:00)',
+        'daily_s_time_1200': '🌅 Обед (12:00)',
+        'daily_s_time_1800': '🌆 После работы (18:00)',
+        'daily_s_time_2000': '🌙 Вечер (20:00)',
+        'daily_s_time_2100': '🌛 Перед сном (21:00)',
+        'daily_enter_manual': '⏰ Ввести время вручную',
+        'daily_set_other_time': '⏰ Настроить другое время',
+        'daily_tz_button': '🌍 Часовой пояс',
+        'daily_disable_btn': '🔕 Отключить уведомления',
+        'daily_get_now_btn': '🕐 Получить асану дня',
+        'daily_manual_title': (
+            "⏰ **Введите время вручную**\n\n"
+            "Пожалуйста, введите время в формате ЧЧ:ММ\n"
+            "Например: 14:30 или 09:15\n\n"
+            "⚠️ Время должно быть в 24-часовом формате"
+        ),
+        'daily_saved_confirm_schedule': '🎯 Асана дня будет приходить каждый день в {time}',
+        'daily_ask_now': 'Хотите получить асану дня прямо сейчас?',
+        'daily_time_invalid': (
+            "❌ Неверный формат времени!\n\n"
+            "Пожалуйста, введите время в формате ЧЧ:ММ\n"
+            "Например: 14:30 или 09:15\n"
+            "Часы: 0-23, Минуты: 0-59"
+        ),
+        'daily_err_user_not_found': '❌ Ошибка: пользователь не найден',
+        'daily_change_time_btn': '⏰ Изменить время',
+        'daily_change_tz_btn': '🌍 Изменить часовой пояс',
+        'daily_tz_city_utc1': '🌍 Калининград (UTC+1)',
+        'daily_tz_city_utc3': '🌍 Москва (UTC+3)',
+        'daily_tz_city_utc4': '🌍 Самара (UTC+4)',
+        'daily_tz_city_utc5': '🌍 Екатеринбург (UTC+5)',
+        'daily_tz_city_utc6': '🌍 Омск (UTC+6)',
+        'daily_tz_city_utc7': '🌍 Красноярск (UTC+7)',
+        'daily_tz_city_utc8': '🌍 Иркутск (UTC+8)',
+        'daily_tz_city_utc9': '🌍 Якутск (UTC+9)',
+        'daily_tz_city_utc10': '🌍 Владивосток (UTC+10)',
+        'daily_tz_city_utc11': '🌍 Магадан (UTC+11)',
+        'daily_tz_city_utc12': '🌍 Камчатка (UTC+12)',
+
+        # --- Асана дня: рассылка (scheduler) ---
+        'daily_asana_title': '🧘‍♂️ **Асана дня**',
+        'daily_difficulty': 'Сложность: {stars}',
+        'daily_desc_unavailable': 'Описание временно недоступно.',
+        'daily_hint_hard': (
+            "💡 **Это сложная асана!**\n"
+            "В премиум-версии есть:\n"
+            "• 📹 Видео с подготовительными упражнениями\n"
+            "• 🔄 Облегченные вариации\n"
+            "• ⚠️ Безопасные альтернативы"
+        ),
+        'daily_hint_hard_cta': 'Хотите освоить эту асану безопасно?',
+        'daily_hint_medium': (
+            "💡 **Хотите глубже изучить эту асану?**\n"
+            "В премиум-версии есть:\n"
+            "• 📹 Детальная видео-отстройка\n"
+            "• 🏗️ Анатомические схемы\n"
+            "• ❌ Разбор типичных ошибок"
+        ),
+        'daily_good_practice': 'Хорошей практики! 🙏',
+        'daily_start_practice_btn': '🕐 Начать практику (5 мин)',
+        'daily_video_premium_btn': '📹 Видео-отстройка (премиум)',
     },
 
     'en': {
@@ -784,5 +975,184 @@ TRANSLATIONS = {
         'cmd_language': 'Change bot language (English / Русский)',
         'cmd_asana_day': 'Asana of the day — get and configure',
         'cmd_pay': 'Get Premium subscription',
+
+        # --- Asana of the day ---
+        'daily_settings_title': '⏰ **Asana of the day settings**',
+        'daily_current_time': 'Current time: {time}',
+        'daily_time_zone': 'Time zone: {tz}',
+        'daily_status': 'Status: {status}',
+        'daily_status_on': '✅ Enabled',
+        'daily_status_off': '❌ Disabled',
+        'daily_choose_time': 'Choose a time for the asana of the day:',
+        'daily_welcome_title': '🌅 **Welcome to the Asana of the Day!**',
+        'daily_welcome_intro': 'This is a daily practice for your yoga:',
+        'daily_welcome_li1': '✅ **Every day** a new asana at a convenient time',
+        'daily_welcome_li2': '✅ **Automatic notifications** - no need to remember',
+        'daily_welcome_li3': '✅ **Premium tips** for difficult asanas',
+        'daily_welcome_li4': '✅ **Progress tracking** and motivation',
+        'daily_welcome_choose': '🎯 **Choose a time for your daily practice:**',
+        'daily_time_changed': (
+            '✅ Time changed to {time}\n\n'
+            'I will now send you the asana of the day at {time}!\n\n'
+            'Want to adjust anything else?'
+        ),
+        'daily_err_save_time': 'Error saving the time',
+        'daily_saved_ok': '✅ **Great! Settings saved**',
+        'daily_saved_time': '⏰ Time: {time}',
+        'daily_notif_on': '📅 Daily notifications: enabled',
+        'daily_first_asana': '🎯 **Your first asana of the day:**',
+        'daily_disabled': (
+            '❌ Asana of the day notifications are disabled\n\n'
+            'You can always enable them again in the settings.\n\n'
+            'Want to explore other features?'
+        ),
+        'daily_tz_title': '🌍 **Time zone settings**',
+        'daily_tz_current': 'Current time zone: {tz}',
+        'daily_tz_choose': 'Choose your time zone:',
+        'daily_tz_changed': (
+            '✅ Time zone changed to {tz}\n\n'
+            'Asanas will now arrive according to your local time.\n\n'
+            'Want to adjust anything else?'
+        ),
+        'daily_err_save_tz': 'Error saving the time zone',
+        'daily_err_no_last': 'Error: no latest asana of the day found',
+        'daily_err_no_asana': 'Error: no asana found for today',
+        'daily_practice_title': '🕐 **Practice: {name}**',
+        'daily_practice_work_menu': (
+            "{title}\n\n"
+            "Configure the timer for your practice:\n\n"
+            "⏱️ **Asana time** (in seconds)\n"
+            "⏸️ **Rest time** (in seconds)\n"
+            "🔄 **Number of cycles** (0 = infinite)\n\n"
+            "Choose work time:"
+        ),
+        'daily_sec_label': 's',
+        'daily_min_label': 'min',
+        'daily_dur': '{m} min {s} s',
+        'daily_enter_custom': '⏰ Enter your own time',
+        'daily_rest_menu': (
+            "{title}\n\n"
+            "Work time: {work}\n\n"
+            "Choose rest time:"
+        ),
+        'daily_cycles_menu': (
+            "{title}\n\n"
+            "Work time: {work}\n"
+            "Rest time: {rest}\n\n"
+            "Choose the number of cycles:"
+        ),
+        'daily_infinite': 'Infinitely',
+        'daily_infinite_text': 'infinite',
+        'daily_start_body': '🧘 Starting the practice! Focus on your breath.\n\nThe first cycle has begun!',
+        'daily_timer_started_title': '🧘‍♂️ **Practice: {name} started!**',
+        'daily_prem_up_easy': (
+            "🌟 **Unlock easier asana variations!**\n\n"
+            "In the premium version you get:\n"
+            "• 📹 Videos with preparatory exercises\n"
+            "• 🔄 3 difficulty levels for every asana\n"
+            "• 🛡️ Safe progressions"
+        ),
+        'daily_prem_up_safe': (
+            "🛡️ **Practice safely!**\n\n"
+            "In the premium version:\n"
+            "• ⚠️ Individual contraindications\n"
+            "• 🔄 Safe alternatives to difficult asanas\n"
+            "• 👨‍⚕️ Modification recommendations"
+        ),
+        'daily_prem_up_video': (
+            "📹 **Detailed video alignment!**\n\n"
+            "In the premium version:\n"
+            "• 🎥 High-quality videos for every asana\n"
+            "• 🏗️ Anatomical 3D diagrams\n"
+            "• ❌ Analysis of typical mistakes"
+        ),
+        'daily_prem_up_general': (
+            "🌟 **Unlock every yoga opportunity!**\n\n"
+            "In the premium version:\n"
+            "• 📹 Video instructions for all asanas\n"
+            "• 🎯 Personal sequence generator\n"
+            "• 📊 Statistics and progress\n"
+            "• 🧘 Ready programs for your goals"
+        ),
+        'daily_prem_up_price': '💰 **$5/month or $45/year**',
+        'daily_prem_up_cta_easy': 'Want to start a safe practice?',
+        'daily_prem_up_cta_safe': 'Your health is an investment!',
+        'daily_prem_up_cta_video': 'Study asanas professionally!',
+        'daily_prem_up_cta_general': 'Start your yoga journey professionally!',
+        'prem_btn_monthly': '💳 Subscribe monthly',
+        'prem_btn_yearly': '💰 Yearly subscription (save 25%)',
+        'daily_w_time_0600': '🌅 Early morning (6:00)',
+        'daily_w_time_0700': '☀️ Morning (7:00)',
+        'daily_w_time_0800': '🌤️ Breakfast (8:00)',
+        'daily_w_time_0900': '🌞 Start of the day (9:00)',
+        'daily_w_time_1000': '🌅 Before work (10:00)',
+        'daily_w_time_1300': '🌤️ Lunch (13:00)',
+        'daily_w_time_1800': '🌆 After work (18:00)',
+        'daily_w_time_2000': '🌙 Evening (20:00)',
+        'daily_w_time_2100': '🌛 Before bed (21:00)',
+        'daily_s_time_0700': '☀️ Morning (7:00)',
+        'daily_s_time_0800': '🌤️ Early morning (8:00)',
+        'daily_s_time_0900': '🌞 Start of the day (9:00)',
+        'daily_s_time_1000': '🌅 Before work (10:00)',
+        'daily_s_time_1200': '🌅 Lunch (12:00)',
+        'daily_s_time_1800': '🌆 After work (18:00)',
+        'daily_s_time_2000': '🌙 Evening (20:00)',
+        'daily_s_time_2100': '🌛 Before bed (21:00)',
+        'daily_enter_manual': '⏰ Enter time manually',
+        'daily_set_other_time': '⏰ Set a different time',
+        'daily_tz_button': '🌍 Time zone',
+        'daily_disable_btn': '🔕 Disable notifications',
+        'daily_get_now_btn': '🕐 Get the asana of the day',
+        'daily_manual_title': (
+            "⏰ **Enter the time manually**\n\n"
+            "Please enter the time in HH:MM format\n"
+            "For example: 14:30 or 09:15\n\n"
+            "⚠️ The time must be in 24-hour format"
+        ),
+        'daily_saved_confirm_schedule': '🎯 The asana of the day will arrive every day at {time}',
+        'daily_ask_now': 'Want to get the asana of the day right now?',
+        'daily_time_invalid': (
+            "❌ Invalid time format!\n\n"
+            "Please enter the time in HH:MM format\n"
+            "For example: 14:30 or 09:15\n"
+            "Hours: 0-23, Minutes: 0-59"
+        ),
+        'daily_err_user_not_found': '❌ Error: user not found',
+        'daily_change_time_btn': '⏰ Change time',
+        'daily_change_tz_btn': '🌍 Change time zone',
+        'daily_tz_city_utc1': '🌍 Kaliningrad (UTC+1)',
+        'daily_tz_city_utc3': '🌍 Moscow (UTC+3)',
+        'daily_tz_city_utc4': '🌍 Samara (UTC+4)',
+        'daily_tz_city_utc5': '🌍 Yekaterinburg (UTC+5)',
+        'daily_tz_city_utc6': '🌍 Omsk (UTC+6)',
+        'daily_tz_city_utc7': '🌍 Krasnoyarsk (UTC+7)',
+        'daily_tz_city_utc8': '🌍 Irkutsk (UTC+8)',
+        'daily_tz_city_utc9': '🌍 Yakutsk (UTC+9)',
+        'daily_tz_city_utc10': '🌍 Vladivostok (UTC+10)',
+        'daily_tz_city_utc11': '🌍 Magadan (UTC+11)',
+        'daily_tz_city_utc12': '🌍 Kamchatka (UTC+12)',
+
+        # --- Asana of the day: scheduler ---
+        'daily_asana_title': '🧘‍♂️ **Asana of the day**',
+        'daily_difficulty': 'Difficulty: {stars}',
+        'daily_desc_unavailable': 'Description temporarily unavailable.',
+        'daily_hint_hard': (
+            "💡 **This is a difficult asana!**\n"
+            "In the premium version:\n"
+            "• 📹 Videos with preparatory exercises\n"
+            "• 🔄 Easier variations\n"
+            "• ⚠️ Safe alternatives"
+        ),
+        'daily_hint_hard_cta': 'Want to master this asana safely?',
+        'daily_hint_medium': (
+            "💡 **Want to go deeper with this asana?**\n"
+            "In the premium version:\n"
+            "• 📹 Detailed video alignment\n"
+            "• 🏗️ Anatomical diagrams\n"
+            "• ❌ Analysis of typical mistakes"
+        ),
+        'daily_good_practice': 'Have a great practice! 🙏',
+        'daily_start_practice_btn': '🕐 Start practice (5 min)',
+        'daily_video_premium_btn': '📹 Video alignment (premium)',
     },
 }
