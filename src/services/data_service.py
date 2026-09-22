@@ -2,7 +2,7 @@ import os
 import logging
 import random
 from os import listdir
-from os.path import exists, join, isfile
+from os.path import exists, join, isfile, basename
 from typing import List, Dict, Optional
 
 from src.models.data_models import AsanaData, CategoryData, BotData
@@ -98,7 +98,7 @@ class DataService:
         if not exists(self.basics_dir):
             return []
         
-        basics_files = [item for item in os.listdir(self.basics_dir) if isfile(join(self.basics_dir, item))]
+        basics_files = [item for item in os.listdir(self.basics_dir) if isfile(join(self.basics_dir, item)) and not item.endswith('.en.txt')]
         basics = []
         for basic in basics_files:
             if basic.endswith('.txt'):
@@ -117,7 +117,7 @@ class DataService:
         if not exists(self.steps_dir):
             return []
         
-        steps_files = [item for item in os.listdir(self.steps_dir) if isfile(join(self.steps_dir, item))]
+        steps_files = [item for item in os.listdir(self.steps_dir) if isfile(join(self.steps_dir, item)) and not item.endswith('.en.txt')]
         steps = []
         for step in steps_files:
             if step.endswith('.txt'):
@@ -246,41 +246,98 @@ class DataService:
 
         return None
 
-    def get_basic_content(self, basic_name: str) -> tuple[str, Optional[str]]:
+    def _parse_base_name(self, fname: str) -> str:
+        """Имя файла без расширения и без ведущего числового префикса ('2.НИЯМА.txt' -> 'НИЯМА')."""
+        name = fname
+        for ext in ('.txt', '.png', '.jpg'):
+            if name.endswith(ext):
+                name = name[:-len(ext)]
+                break
+        if name and name[0].isdigit():
+            parts = name.split('.', 1)
+            if len(parts) > 1:
+                return parts[1].strip()
+        return name
+
+    def _find_base_file(self, directory: str, name: str, exts: tuple) -> Optional[str]:
+        """Находит файл в каталоге, чьё распарсенное имя точно равно name."""
+        if not exists(directory):
+            return None
+        for item in os.listdir(directory):
+            if not item.endswith(exts):
+                continue
+            if item.endswith('.en.txt'):
+                continue
+            if self._parse_base_name(item) == name:
+                return join(directory, item)
+        return None
+
+    def _find_txt_file(self, directory: str, name: str) -> Optional[str]:
+        return self._find_base_file(directory, name, ('.txt',))
+
+    def localized_basic_name(self, basic_name: str, lang: str = 'ru') -> str:
+        """Локализованное имя основы йоги (для EN — первая строка <файл>.en.txt)."""
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
+        if lang != 'en':
+            return basic_name
+        txt_path = self._find_txt_file(self.basics_dir, basic_name)
+        if txt_path:
+            en_path = txt_path[:-4] + '.en.txt'
+            if exists(en_path):
+                try:
+                    with open(en_path, 'r', encoding='utf-8') as f:
+                        first_line = f.readline().strip()
+                        if first_line:
+                            return first_line
+                except Exception as e:
+                    logger.error(f"Error reading {en_path}: {e}")
+        return basic_name
+
+    def localized_step_name(self, step_name: str, lang: str = 'ru') -> str:
+        """Локализованное имя ступени йоги (для EN — первая строка <файл>.en.txt)."""
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
+        if lang != 'en':
+            return step_name
+        txt_path = self._find_txt_file(self.steps_dir, step_name)
+        if txt_path:
+            en_path = txt_path[:-4] + '.en.txt'
+            if exists(en_path):
+                try:
+                    with open(en_path, 'r', encoding='utf-8') as f:
+                        first_line = f.readline().strip()
+                        if first_line:
+                            return first_line
+                except Exception as e:
+                    logger.error(f"Error reading {en_path}: {e}")
+        return step_name
+
+    def get_basic_content(self, basic_name: str, lang: str = 'ru') -> tuple[str, Optional[str]]:
         """Получает контент для основы йоги"""
         # Добавим логирование для диагностики
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"Looking for basic: '{basic_name}'")
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
         
-        # Ищем файл, который заканчивается на basic_name (для поддержки файлов с номерами)
-        txt_path = None
-        png_path = None
+        txt_path = self._find_txt_file(self.basics_dir, basic_name)
+        png_path = self._find_base_file(self.basics_dir, basic_name, ('.png',))
+        if png_path:
+            logger.info(f"Found png: {basename(png_path)}")
         
-        if exists(self.basics_dir):
-            # Ищем txt файл
-            for item in os.listdir(self.basics_dir):
-                if item.endswith('.txt') and item.replace('.txt', '').endswith(basic_name):
-                    txt_path = join(self.basics_dir, item)
-                    logger.info(f"Found txt: {item}")
-                    break
-            
-            # Ищем png файл с такой же логикой
-            for item in os.listdir(self.basics_dir):
-                if item.endswith('.png') and item.replace('.png', '').endswith(basic_name):
-                    png_path = join(self.basics_dir, item)
-                    logger.info(f"Found png: {item}")
-                    break
+        if txt_path is None:
+            logger.warning(f"Txt file not found for: '{basic_name}'")
+            return "", png_path if png_path and exists(png_path) else None
+        
+        read_path = txt_path
+        if lang == 'en':
+            en_path = txt_path[:-4] + '.en.txt'
+            if exists(en_path):
+                read_path = en_path
         
         content = ""
-        if txt_path and exists(txt_path):
-            try:
-                with open(txt_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-            except Exception as e:
-                logger.error(f"Error reading {txt_path}: {e}")
-        else:
-            logger.warning(f"Txt file not found for: '{basic_name}'")
+        try:
+            with open(read_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            logger.error(f"Error reading {read_path}: {e}")
         
         image_path = png_path if png_path and exists(png_path) else None
         
@@ -349,23 +406,25 @@ class DataService:
         logger.warning(f"Asana '{asana_name}' not found in any category")
         return "", None
     
-    def get_step_content(self, step_name: str) -> str:
+    def get_step_content(self, step_name: str, lang: str = 'ru') -> str:
         """Получает контент для ступени йоги"""
-        # Ищем файл, который заканчивается на step_name (для поддержки файлов с номерами)
-        txt_path = None
+        lang = 'en' if str(lang).lower().startswith('en') else 'ru'
+        txt_path = self._find_txt_file(self.steps_dir, step_name)
         
-        if exists(self.steps_dir):
-            for item in os.listdir(self.steps_dir):
-                if item.endswith('.txt') and item.replace('.txt', '').endswith(step_name):
-                    txt_path = join(self.steps_dir, item)
-                    break
+        if txt_path is None:
+            return ""
         
-        if txt_path and exists(txt_path):
-            try:
-                with open(txt_path, 'r', encoding='utf-8') as f:
-                    return f.read()
-            except Exception as e:
-                logger.error(f"Error reading {txt_path}: {e}")
+        read_path = txt_path
+        if lang == 'en':
+            en_path = txt_path[:-4] + '.en.txt'
+            if exists(en_path):
+                read_path = en_path
+        
+        try:
+            with open(read_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            logger.error(f"Error reading {read_path}: {e}")
         
         return ""
     

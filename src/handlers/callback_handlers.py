@@ -155,7 +155,8 @@ class CallbackHandlers:
         lang = self._lang(callback_query.from_user.id)
 
         data = self.data_service.load_data()
-        keyboard = self.keyboard_service.create_simple_menu(data.basics, 'basic', lang)
+        items = [self.data_service.localized_basic_name(b, lang) for b in data.basics]
+        keyboard = self.keyboard_service.create_simple_menu(items, 'basic', lang)
         keyboard.inline_keyboard.append(
             [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data='main_menu')]
         )
@@ -182,7 +183,7 @@ class CallbackHandlers:
             )
             return
 
-        content, image_path = self.data_service.get_basic_content(basic_name)
+        content, image_path = self.data_service.get_basic_content(basic_name, lang)
 
         if not content:
             await self.bot.send_message(
@@ -207,7 +208,8 @@ class CallbackHandlers:
         lang = self._lang(callback_query.from_user.id)
 
         data = self.data_service.load_data()
-        keyboard = self.keyboard_service.create_simple_menu(data.steps, 'step', lang)
+        items = [self.data_service.localized_step_name(s, lang) for s in data.steps]
+        keyboard = self.keyboard_service.create_simple_menu(items, 'step', lang)
         keyboard.inline_keyboard.append(
             [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data='main_menu')]
         )
@@ -234,7 +236,7 @@ class CallbackHandlers:
             )
             return
 
-        content = self.data_service.get_step_content(step_name)
+        content = self.data_service.get_step_content(step_name, lang)
 
         if not content:
             await self.bot.send_message(
