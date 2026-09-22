@@ -827,6 +827,56 @@ TRANSLATIONS = {
         'flt_offer_cta': '\n🚀 Откройте полный потенциал практики!',
         'flt_btn_all_asanas': '📚 Все асаны',
         'flt_btn_another_asana': '🎲 Другая асана',
+
+        # --- Оплата (payments) ---
+        'pay_text': '💳 <b>Оплата подписки Premium</b>\n\n'
+                    'Переведите сумму на одну из карт (получатель: <b>Руслан Дмитриевич С.</b>) '
+                    'и отправьте сюда скриншот/фото чека об оплате.\n'
+                    'После проверки админом Premium будет открыт.\n\n'
+                    'Реквизиты:\n'
+                    '{requisites}\n\n'
+                    'Отправьте фото чека 👇',
+        'pay_requisites_unavailable': 'Реквизиты пока недоступны. Попробуйте позже.',
+        'pay_need_command': 'Чтобы оплатить, сначала отправьте команду /pay или нажмите «Оплатить» в меню подписки.',
+        'pay_download_error': 'Не удалось получить фото чека. Попробуйте ещё раз.',
+        'pay_receipt_ok': '✅ Чек получен и отправлен администратору на проверку.\n'
+                          'Как только оплата будет подтверждена, мы сообщим вам и откроем Premium.',
+        'pay_receipt_error': 'Не удалось отправить чек. Попробуйте ещё раз.',
+        'pay_confirmed': '✅ <b>Оплата подтверждена!</b> 🎉\n\n'
+                         'Премиум-подписка и все функции доступны на <b>{days} дней</b>{until}',
+        'pay_confirmed_until': ' (до <b>{end}</b>).',
+        'pay_confirmed_dot': '.',
+        'pay_rejected': '❌ <b>Заявка на оплату отклонена.</b>\n\n'
+                        'К сожалению, мы не смогли подтвердить ваш платёж.\n'
+                        'Свяжитесь с администратором @yogaasana_bot, '
+                        'если вы уверены в оплате, или попробуйте ещё раз.',
+
+        # --- Готовые комплексы (ready sequences) ---
+        'rs_menu_empty': '🎬 *Готовые комплексы*\n\n'
+                         'Пока здесь нет готовых комплексов. '
+                         'Загляните позже — мы добавляем новые практики!',
+        'rs_menu_title': '🎬 *Готовые комплексы*\n\n'
+                         'Выберите комплекс из списка ниже:\n\n'
+                         '📊 Доступно: {free} бесплатных, {premium} премиум\n\n',
+        'rs_menu_error': 'Произошла ошибка при загрузке комплексов. Попробуйте позже.',
+        'rs_not_found': 'Комплекс не найден',
+        'rs_status_owned': '⭐ Комплекс доступен в премиум-версии\n\n',
+        'rs_status_locked': '🎥 **Видео доступно в премиум-версии**\n\n',
+        'rs_status_free': '🎥 **Видео доступно**\n\n',
+        'rs_seq_title': '🎬 **{name}**\n\n',
+        'rs_video_unavailable': 'Видео временно недоступно',
+        'rs_video_missing': '😔 К сожалению, это видео временно недоступно. '
+                            'Попробуйте позже.',
+        'rs_premium_offer': '🎯 **Хотите видео-инструкцию?**\n\n'
+                            'В премиум-версии вы получите:\n'
+                            '• 🎥 Детальные видео для всех комплексов\n'
+                            '• 📊 Анализ техники и исправление ошибок\n'
+                            '• 🎵 Аудио-сопровождение практик\n'
+                            '• 🔄 Безлимитные генерации комплексов\n\n'
+                            'Попробуйте 7 дней бесплатно!',
+        'rs_btn_plans': '💳 Узнать о тарифах',
+        'rs_menu_back_btn': 'Готовые комплексы',
+        'rs_error_alert': 'Произошла ошибка',
     },
 
     'en': {
@@ -1548,5 +1598,55 @@ TRANSLATIONS = {
         'flt_offer_cta': '\n🚀 Unlock the full potential of your practice!',
         'flt_btn_all_asanas': '📚 All asanas',
         'flt_btn_another_asana': '🎲 Another asana',
+
+        # --- Payments ---
+        'pay_text': '💳 <b>Premium subscription payment</b>\n\n'
+                    'Transfer the amount to one of the cards (recipient: <b>Ruslan Dmitrievich S.</b>) '
+                    'and send a screenshot/photo of the payment receipt here.\n'
+                    'After verification by the admin, Premium will be activated.\n\n'
+                    'Requisites:\n'
+                    '{requisites}\n\n'
+                    'Send the receipt photo 👇',
+        'pay_requisites_unavailable': 'Requisites are not available yet. Try later.',
+        'pay_need_command': 'To pay, first send the /pay command or press «Pay» in the subscription menu.',
+        'pay_download_error': 'Failed to get the receipt photo. Try again.',
+        'pay_receipt_ok': '✅ Receipt received and sent to the administrator for verification.\n'
+                          'As soon as the payment is confirmed, we will notify you and activate Premium.',
+        'pay_receipt_error': 'Failed to send the receipt. Try again.',
+        'pay_confirmed': '✅ <b>Payment confirmed!</b> 🎉\n\n'
+                         'Premium subscription and all features are available for <b>{days} days</b>{until}',
+        'pay_confirmed_until': ' (until <b>{end}</b>).',
+        'pay_confirmed_dot': '.',
+        'pay_rejected': '❌ <b>Payment request rejected.</b>\n\n'
+                        'Unfortunately, we could not confirm your payment.\n'
+                        'Contact the administrator @yogaasana_bot '
+                        'if you are sure about the payment, or try again.',
+
+        # --- Ready sequences ---
+        'rs_menu_empty': '🎬 *Ready-made sequences*\n\n'
+                         'There are no ready-made sequences yet. '
+                         'Come back later — we are adding new practices!',
+        'rs_menu_title': '🎬 *Ready-made sequences*\n\n'
+                         'Choose a sequence from the list below:\n\n'
+                         '📊 Available: {free} free, {premium} premium\n\n',
+        'rs_menu_error': 'An error occurred while loading the sequences. Try later.',
+        'rs_not_found': 'Sequence not found',
+        'rs_status_owned': '⭐ Sequence available in the premium version\n\n',
+        'rs_status_locked': '🎥 **Video available in the premium version**\n\n',
+        'rs_status_free': '🎥 **Video available**\n\n',
+        'rs_seq_title': '🎬 **{name}**\n\n',
+        'rs_video_unavailable': 'Video is temporarily unavailable',
+        'rs_video_missing': '😔 Unfortunately, this video is temporarily unavailable. '
+                            'Try later.',
+        'rs_premium_offer': '🎯 **Want a video instruction?**\n\n'
+                            'In the premium version you will get:\n'
+                            '• 🎥 Detailed videos for all sequences\n'
+                            '• 📊 Technique analysis and error correction\n'
+                            '• 🎵 Audio accompaniment for practices\n'
+                            '• 🔄 Unlimited sequence generations\n\n'
+                            'Try 7 days free!',
+        'rs_btn_plans': '💳 Learn about plans',
+        'rs_menu_back_btn': 'Ready-made sequences',
+        'rs_error_alert': 'An error occurred',
     },
 }

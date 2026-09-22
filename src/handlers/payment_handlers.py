@@ -7,6 +7,9 @@ from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.types import BufferedInputFile
 
+from src.i18n import t
+from src.services.database_service import db_service
+
 logger = logging.getLogger(__name__)
 
 API_URL = os.getenv("API_URL", "http://dharana-api:8000")
@@ -16,15 +19,11 @@ ADMIN_TELEGRAM_ID = os.getenv("ADMIN_TELEGRAM_ID", "")
 # In-memory set of telegram ids that are expected to send a receipt after /pay
 awaiting_receipt = set()
 
-_pay_text = (
-    "💳 <b>Оплата подписки Premium</b>\n\n"
-    "Переведите сумму на одну из карт (получатель: <b>Руслан Дмитриевич С.</b>) "
-    "и отправьте сюда скриншот/фото чека об оплате.\n"
-    "После проверки админом Premium будет открыт.\n\n"
-    "Реквизиты:\n"
-    "{requisites}\n\n"
-    "Отправьте фото чека 👇"
-)
+
+def _pay_text(lang: str) -> str:
+    return (
+        t(lang, 'pay_text')
+    )
 
 
 class PaymentHandlers:
@@ -32,10 +31,15 @@ class PaymentHandlers:
         self.bot = bot
         self.subscription_service = subscription_service
 
+    @staticmethod
+    def _lang(user_id: int) -> str:
+        return db_service.get_user_language(user_id)
+
     def _headers(self):
         return {"X-Bot-Key": BOT_ADMIN_KEY}
 
     async def _send_pay_requisites(self, chat_id: int, is_callback: bool = False):
+        lang = self._lang(chat_id)
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
@@ -49,7 +53,7 @@ class PaymentHandlers:
             requisites = []
 
         if not requisites:
-            text = "Реквизиты пока недоступны. Попробуйте позже."
+            text = t(lang, 'pay_requisites_unavailable')
             if is_callback:
                 return text, None
             return await self.bot.send_message(chat_id, text)
@@ -60,12 +64,12 @@ class PaymentHandlers:
 
         # Получатель указывается один раз в _pay_text (он уже выше списка карт)
         if is_callback:
-            return _pay_text.format(requisites="\n".join(lines)), None
+            return _pay_text(lang).format(requisites="\n".join(lines)), None
 
         awaiting_receipt.add(chat_id)
         await self.bot.send_message(
             chat_id,
-            _pay_text.format(requisites="\n".join(lines)),
+            _pay_text(lang).format(requisites="\n".join(lines)),
             parse_mode=ParseMode.HTML,
         )
 
@@ -92,9 +96,10 @@ class PaymentHandlers:
 
     async def handle_receipt_photo(self, message: types.Message):
         tg_id = message.from_user.id
+        lang = self._lang(tg_id)
         if tg_id not in awaiting_receipt:
             await message.reply(
-                "Чтобы оплатить, сначала отправьте команду /pay или нажмите «Оплатить» в меню подписки."
+                t(lang, 'pay_need_command')
             )
             return
 
@@ -108,7 +113,7 @@ class PaymentHandlers:
             data = downloaded.read() if not isinstance(downloaded, bytes) else downloaded
         except Exception as e:
             logger.error(f"download receipt error: {e}")
-            return await message.reply("Не удалось получить фото чека. Попробуйте ещё раз.")
+            return await message.reply(t(lang, 'pay_download_error'))
 
         awaiting_receipt.discard(tg_id)
 
@@ -130,15 +135,14 @@ class PaymentHandlers:
                 )
                 if resp.status_code == 200:
                     await message.reply(
-                        "✅ Чек получен и отправлен администратору на проверку.\n"
-                        "Как только оплата будет подтверждена, мы сообщим вам и откроем Premium."
+                        t(lang, 'pay_receipt_ok')
                     )
                 else:
                     logger.error(f"receipt post error: {resp.status_code} {resp.text}")
-                    await message.reply("Не удалось отправить чек. Попробуйте ещё раз.")
+                    await message.reply(t(lang, 'pay_receipt_error'))
         except Exception as e:
             logger.error(f"receipt upload error: {e}")
-            await message.reply("Не удалось отправить чек. Попробуйте ещё раз.")
+            await message.reply(t(lang, 'pay_receipt_error'))
 
     # ---------- Подтверждения для клиента ----------
     async def confirmations_loop(self):
@@ -169,15 +173,18 @@ class PaymentHandlers:
             if not tg_id:
                 continue
             try:
+                lang = self._lang(tg_id)
                 days = p.get("premium_days", 30)
                 end = p.get("subscription_end")
                 end_str = ""
                 if end:
                     end_str = end[:10]
+                until = (
+                    t(lang, 'pay_confirmed_until', end=end_str) if end_str
+                    else t(lang, 'pay_confirmed_dot')
+                )
                 text = (
-                    "✅ <b>Оплата подтверждена!</b> 🎉\n\n"
-                    f"Премиум-подписка и все функции доступны на <b>{days} дней</b>"
-                    + (f" (до <b>{end_str}</b>)." if end_str else ".")
+                    t(lang, 'pay_confirmed', days=days, until=until)
                 )
                 if p.get("receipt_url"):
                     try:
@@ -227,11 +234,9 @@ class PaymentHandlers:
             if not tg_id:
                 continue
             try:
+                lang = self._lang(tg_id)
                 text = (
-                    "❌ <b>Заявка на оплату отклонена.</b>\n\n"
-                    "К сожалению, мы не смогли подтвердить ваш платёж.\n"
-                    "Свяжитесь с администратором @yogaasana_bot, "
-                    "если вы уверены в оплате, или попробуйте ещё раз."
+                    t(lang, 'pay_rejected')
                 )
                 await self.bot.send_message(tg_id, text, parse_mode=ParseMode.HTML)
             except Exception as e:

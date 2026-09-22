@@ -7,6 +7,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from src.services.subscription_service import SubscriptionService
 from src.services.ready_sequence_file_service import ReadySequenceFileService
 from src.utils.keyboard_service import KeyboardService
+from src.i18n import t
+from src.services.database_service import db_service
 
 logger = logging.getLogger(__name__)
 
@@ -18,36 +20,38 @@ class ReadySequenceHandlers:
         self.subscription_service = subscription_service
         self.ready_sequence_service = ReadySequenceFileService()
         self.keyboard_service = KeyboardService()
+
+    @staticmethod
+    def _lang(user_id: int) -> str:
+        return db_service.get_user_language(user_id)
     
     async def show_ready_sequences_menu(self, callback: types.CallbackQuery):
         """Показывает меню готовых комплексов"""
+        lang = self._lang(callback.from_user.id)
         try:
             sequences = self.ready_sequence_service.get_all_sequences()
             
             if not sequences:
                 await self.bot.send_message(
                     callback.from_user.id,
-                    "🎬 *Готовые комплексы*\n\n"
-                    "Пока здесь нет готовых комплексов. "
-                    "Загляните позже — мы добавляем новые практики!",
-                    reply_markup=self.keyboard_service.create_main_menu()
+                    t(lang, 'rs_menu_empty'),
+                    reply_markup=self.keyboard_service.create_main_menu(lang)
                 )
                 await callback.answer()
                 return
             
-            text = "🎬 *Готовые комплексы*\n\n"
-            text += "Выберите комплекс из списка ниже:\n\n"
+            text = t(lang, 'rs_menu_title')
             
             # Добавляем информацию о количестве комплексов
             free_count = len([s for s in sequences if not s['is_premium']])
             premium_count = len([s for s in sequences if s['is_premium']])
             
-            text += f"📊 Доступно: {free_count} бесплатных, {premium_count} премиум\n\n"
+            text = text.format(free=free_count, premium=premium_count)
             
             await self.bot.send_message(
                 callback.from_user.id,
                 text,
-                reply_markup=self.keyboard_service.create_ready_sequences_menu(sequences)
+                reply_markup=self.keyboard_service.create_ready_sequences_menu(sequences, lang)
             )
             
             await callback.answer()
@@ -56,13 +60,14 @@ class ReadySequenceHandlers:
             logger.error(f"Error showing ready sequences menu: {e}")
             await self.bot.send_message(
                 callback.from_user.id,
-                "Произошла ошибка при загрузке комплексов. Попробуйте позже.",
-                reply_markup=self.keyboard_service.create_main_menu()
+                t(lang, 'rs_menu_error'),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
             await callback.answer()
     
     async def show_ready_sequence(self, callback: types.CallbackQuery):
         """Показывает информацию о готовом комплексе"""
+        lang = self._lang(callback.from_user.id)
         try:
             sequence_id = int(callback.data.split('_')[-1])
             user_id = callback.from_user.id
@@ -71,7 +76,7 @@ class ReadySequenceHandlers:
             sequence = self.ready_sequence_service.get_sequence_by_id(sequence_id)
             
             if not sequence:
-                await callback.answer("Комплекс не найден", show_alert=True)
+                await callback.answer(t(lang, 'rs_not_found'), show_alert=True)
                 return
             
             # Проверяем статус подписки
@@ -80,13 +85,13 @@ class ReadySequenceHandlers:
             
             # Краткая информация о доступности (без вымышленных метаданных)
             if sequence['is_premium'] and is_premium:
-                status_text = "⭐ Комплекс доступен в премиум-версии\n\n"
+                status_text = t(lang, 'rs_status_owned')
             elif sequence['is_premium'] and not is_premium:
-                status_text = "🎥 **Видео доступно в премиум-версии**\n\n"
+                status_text = t(lang, 'rs_status_locked')
             else:
-                status_text = "🎥 **Видео доступно**\n\n"
+                status_text = t(lang, 'rs_status_free')
             
-            full_text = f"🎬 **{sequence['name']}**\n\n"
+            full_text = t(lang, 'rs_seq_title', name=sequence['name'])
             full_text += status_text
             
             await self.bot.send_message(user_id, full_text, parse_mode=ParseMode.MARKDOWN)
@@ -100,22 +105,14 @@ class ReadySequenceHandlers:
                         await self.bot.send_video(user_id, FSInputFile(sequence['video_path']))
                     except Exception as e:
                         logger.error(f"Error sending ready sequence video: {e}")
-                        await self.bot.send_message(user_id, "Видео временно недоступно")
+                        await self.bot.send_message(user_id, t(lang, 'rs_video_unavailable'))
                 else:
                     # Бесплатный пользователь и премиум комплекс - показываем предложение подписки
-                    premium_text = (
-                        "🎯 **Хотите видео-инструкцию?**\n\n"
-                        "В премиум-версии вы получите:\n"
-                        "• 🎥 Детальные видео для всех комплексов\n"
-                        "• 📊 Анализ техники и исправление ошибок\n"
-                        "• 🎵 Аудио-сопровождение практик\n"
-                        "• 🔄 Безлимитные генерации комплексов\n\n"
-                        "Попробуйте 7 дней бесплатно!"
-                    )
+                    premium_text = t(lang, 'rs_premium_offer')
                     
                     premium_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="🚀 7 дней бесплатно", callback_data="subscription_trial")],
-                        [InlineKeyboardButton(text="💳 Узнать о тарифах", callback_data="subscription_plans")]
+                        [InlineKeyboardButton(text=t(lang, 'sub_btn_trial7'), callback_data="subscription_trial")],
+                        [InlineKeyboardButton(text=t(lang, 'rs_btn_plans'), callback_data="subscription_plans")]
                     ])
                     
                     await self.bot.send_message(user_id, premium_text, parse_mode=ParseMode.MARKDOWN, reply_markup=premium_keyboard)
@@ -123,19 +120,18 @@ class ReadySequenceHandlers:
                 # Видео файл не найден
                 await self.bot.send_message(
                     user_id,
-                    "😔 К сожалению, это видео временно недоступно. "
-                    "Попробуйте позже.",
+                    t(lang, 'rs_video_missing'),
                 )
             
             # Кнопка возврата
             sequences = self.ready_sequence_service.get_all_sequences()
             await callback.message.reply(
-                'Готовые комплексы',
-                reply_markup=self.keyboard_service.create_ready_sequences_menu(sequences)
+                t(lang, 'rs_menu_back_btn'),
+                reply_markup=self.keyboard_service.create_ready_sequences_menu(sequences, lang)
             )
             
             await callback.answer()
             
         except Exception as e:
             logger.error(f"Error showing ready sequence: {e}")
-            await callback.answer("Произошла ошибка", show_alert=True)
+            await callback.answer(t(lang, 'rs_error_alert'), show_alert=True)
