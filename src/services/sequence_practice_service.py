@@ -8,6 +8,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from src.models.sequence_models import PracticeSequence, SequenceItem
 from src.services.timer_service import timer_service, TimerConfig
 from src.services.data_service import DataService
+from src.services.database_service import db_service
+from src.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,11 @@ class SequencePracticeService:
         self.active_sequences: Dict[int, PracticeSequence] = {}  # user_id -> sequence
         self.current_positions: Dict[int, int] = {}  # user_id -> current position
         self.active_timers: Dict[int, str] = {}  # user_id -> timer_id
+
+    @staticmethod
+    def _lang(user_id: int) -> str:
+        """Язык пользователя ('ru'|'en')."""
+        return db_service.get_user_language(user_id)
 
     async def _send_phase_notification(self, bot, user_id: int, text: str, delay: int = 2):
         """Отправляет временное уведомление со звуком и удаляет его через несколько секунд"""
@@ -166,24 +173,30 @@ class SequencePracticeService:
     
     async def _send_next_asana(self, user_id: int, bot, message_id: int):
         """Отправляет следующую асану"""
+        lang = self._lang(user_id)
         current_asana = self.get_current_asana(user_id)
         if not current_asana:
             return
         
         # Звуковое уведомление о смене фазы
-        phase_name = "Отдых 😮‍💨" if current_asana.is_rest else current_asana.asana_name
-        await self._send_phase_notification(bot, user_id, f"🔔**{phase_name}**")
+        phase_name = t(lang, 'seq_phase_rest') if current_asana.is_rest else current_asana.asana_name
+        await self._send_phase_notification(bot, user_id, t(lang, 'seq_phase_notif', name=phase_name))
         
         progress = self.get_progress(user_id)
-        
+
+        pct = f"{progress['progress_percent']:.0f}"
         if current_asana.is_rest:
-            text = f"🧘 **Отдых**\n\n{current_asana.description}\n\n⏱️ {current_asana.duration_seconds} секунд"
+            text = (
+                f"{t(lang, 'seq_rest_title')}\n\n"
+                f"{current_asana.description}\n\n"
+                f"{t(lang, 'seq_sec_word', sec=current_asana.duration_seconds)}"
+            )
         else:
             text = (
-                f"🧘 **{current_asana.asana_name}**\n\n"
+                f"{t(lang, 'seq_asana_title_named', name=current_asana.asana_name)}\n\n"
                 f"{current_asana.description}\n\n"
-                f"⏱️ {current_asana.duration_seconds} секунд\n"
-                f"📊 Прогресс: {progress['current']}/{progress['total']} ({progress['progress_percent']:.0f}%)"
+                f"{t(lang, 'seq_sec_word', sec=current_asana.duration_seconds)}\n"
+                f"{t(lang, 'seq_progress_inline', cur=progress['current'], total=progress['total'], pct=pct)}"
             )
         
         # Добавляем изображение если есть
@@ -227,24 +240,25 @@ class SequencePracticeService:
     
     async def _send_sequence_complete(self, user_id: int, bot, message_id: int):
         """Отправляет сообщение о завершении последовательности"""
+        lang = self._lang(user_id)
         sequence = self.active_sequences.get(user_id)
         if not sequence:
             return
         
-        await self._send_phase_notification(bot, user_id, "🎉 Практика завершена!")
+        await self._send_phase_notification(bot, user_id, t(lang, 'seq_done_notif'))
         
         text = (
-            f"🎉 **Практика завершена!**\n\n"
-            f"📊 **Статистика:**\n"
-            f"• Выполнено асан: {len(sequence.items)}\n"
-            f"• Общее время: {sequence.total_duration.total_seconds() // 60} минут\n"
-            f"• Потрачено калорий: ~{sequence.estimated_calories} ккал\n\n"
-            f"Отличная работа! Хотите начать новую практику?"
+            f"{t(lang, 'seq_complete_title')}\n\n"
+            f"{t(lang, 'seq_complete_stats')}\n"
+            f"{t(lang, 'seq_complete_done', count=len(sequence.items))}\n"
+            f"{t(lang, 'seq_complete_time', mins=sequence.total_duration.total_seconds() // 60)}\n"
+            f"{t(lang, 'seq_complete_kcal', kcal=sequence.estimated_calories)}\n\n"
+            f"{t(lang, 'seq_complete_prompt')}"
         )
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Новая практика", callback_data="sequence_menu")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+            [InlineKeyboardButton(text=t(lang, 'seq_btn_new_practice'), callback_data="sequence_menu")],
+            [InlineKeyboardButton(text=t(lang, 'btn_home'), callback_data="main_menu")]
         ])
         
         await bot.edit_message_text(
@@ -260,15 +274,12 @@ class SequencePracticeService:
     
     async def _send_sequence_paused(self, user_id: int, bot, message_id: int):
         """Отправляет сообщение о паузе"""
+        lang = self._lang(user_id)
         current_asana = self.get_current_asana(user_id)
         if not current_asana:
             return
         
-        text = (
-            f"⏸️ **Практика на паузе**\n\n"
-            f"Текущая асана: **{current_asana.asana_name}**\n\n"
-            f"Хотите продолжить?"
-        )
+        text = t(lang, 'sqp_pause_title', name=current_asana.asana_name)
         
         keyboard = self._create_practice_keyboard(user_id)
         
@@ -282,12 +293,13 @@ class SequencePracticeService:
     
     def _create_practice_keyboard(self, user_id: int) -> InlineKeyboardMarkup:
         """Создает клавиатуру для практики"""
+        lang = self._lang(user_id)
         progress = self.get_progress(user_id)
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="⏸️ Пауза", callback_data="sequence_pause")],
-            [InlineKeyboardButton(text="⏭️ Пропустить", callback_data="sequence_skip")],
-            [InlineKeyboardButton(text="🛑 Завершить", callback_data="sequence_stop")],
+            [InlineKeyboardButton(text=t(lang, 'sqp_pause_btn'), callback_data="sequence_pause")],
+            [InlineKeyboardButton(text=t(lang, 'sqp_skip_btn'), callback_data="sequence_skip")],
+            [InlineKeyboardButton(text=t(lang, 'sqp_stop_btn'), callback_data="sequence_stop")],
             [InlineKeyboardButton(text=f"📊 {progress.get('current', 0)}/{progress.get('total', 0)}", callback_data="sequence_progress")]
         ])
         

@@ -91,3 +91,6 @@ check_*.py
 create_*.py
 debug_*.py
 test_*.py
+
+# Probe / fidelity scripts (dev artifacts)
+tr_data/
