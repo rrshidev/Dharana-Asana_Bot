@@ -507,10 +507,6 @@ class CallbackHandlers:
         )
         await self.show_main_menu(telegram_id, callback_query.message.message_id)
 
-    async def filter_difficulty_callback(self, callback_query: types.CallbackQuery):
-        """Обработчик выбора фильтра сложности"""
-        await self.filter_handlers.filter_reset_all_callback(callback_query)
-
     async def filter_effect_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора фильтра эффектов"""
         await self.filter_handlers.filter_effect_callback(callback_query)
