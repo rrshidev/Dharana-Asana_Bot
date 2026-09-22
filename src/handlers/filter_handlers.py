@@ -10,8 +10,29 @@ from src.services.filter_service import FilterService, AsanaDayNotifier
 from src.utils.keyboard_service import KeyboardService
 from src.models.data_models import AsanaData, UserPreferences
 from src.data.asana_effects import ASANA_EFFECTS, ASANA_DIFFICULTY, ASANA_CONTRAINDICATIONS
+from src.i18n import t
+from src.services.database_service import db_service
 
 logger = logging.getLogger(__name__)
+
+_DIFF_TEXT_KEYS = {
+    1: 'flt_diff_1',
+    2: 'flt_diff_2',
+    3: 'flt_diff_3',
+    4: 'flt_diff_4',
+    5: 'flt_diff_5',
+}
+
+_EFFECT_TEXT_KEYS = {
+    'back_pain': 'flt_effect_back_pain',
+    'calm_mind': 'flt_effect_calm_mind',
+    'boost_energy': 'flt_effect_boost_energy',
+    'digestion': 'flt_effect_digestion',
+    'flexibility': 'flt_effect_flexibility',
+    'balance': 'flt_effect_balance',
+    'strength': 'flt_effect_strength',
+    'stress_relief': 'flt_effect_stress_relief',
+}
 
 
 class FilterHandlers:
@@ -29,6 +50,11 @@ class FilterHandlers:
         
         # Хранилище предпочтений пользователей (в будущем будет в БД)
         self.user_preferences = {}
+
+    @staticmethod
+    def _lang(user_id: int) -> str:
+        """Язык пользователя ('ru'|'en')."""
+        return db_service.get_user_language(user_id)
     
     async def filter_difficulty_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора фильтра сложности"""
@@ -40,6 +66,7 @@ class FilterHandlers:
         
         action = data[2]
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         if action == "reset":
             # Сбрасываем фильтр сложности
@@ -49,9 +76,8 @@ class FilterHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text="🔄 Фильтр сложности сброшен\n\n"
-                       "Теперь показываются все асаны любого уровня сложности.",
-                reply_markup=self.keyboard_service.create_main_menu()
+                text=t(lang, 'flt_difficulty_reset'),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
         else:
             # Устанавливаем новый фильтр сложности
@@ -73,21 +99,19 @@ class FilterHandlers:
                     await self.bot.edit_message_text(
                         chat_id=user_id,
                         message_id=callback_query.message.message_id,
-                        text="😔 Асан с таким уровнем сложности не найдено\n\n"
-                               "Попробуйте другой уровень сложности или сбросьте фильтр.",
-                        reply_markup=self.filter_service.get_difficulty_filter_keyboard(difficulty)
+                        text=t(lang, 'flt_diff_not_found'),
+                        reply_markup=self.filter_service.get_difficulty_filter_keyboard(difficulty, lang)
                     )
                     return
                 
                 await self.bot.edit_message_text(
                     chat_id=user_id,
                     message_id=callback_query.message.message_id,
-                    text=f"✅ Фильтр применен!\n\n"
-                           f"Показаны асаны сложности: "
-                           f"{'⭐' * difficulty} ({self._get_difficulty_text(difficulty)})\n"
-                           f"Найдено асан: {len(filtered_asanas)}\n\n"
-                           "Выберите асану из списка ниже:",
-                    reply_markup=self._create_filtered_asanas_keyboard(filtered_asanas)
+                    text=t(lang, 'flt_diff_applied',
+                           stars='⭐' * difficulty,
+                           difficulty=self._get_difficulty_text(lang, difficulty),
+                           count=len(filtered_asanas)),
+                    reply_markup=self._create_filtered_asanas_keyboard(filtered_asanas, lang)
                 )
                 
             except ValueError:
@@ -110,6 +134,7 @@ class FilterHandlers:
         action = '_'.join(data[2:])  # Объединяем все части после 'filter_effect'
         logger.info(f"Action extracted: {action}")
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         logger.info(f"User ID: {user_id}")
         logger.info(f"Checking if action is 'reset': {action == 'reset'}")
@@ -123,9 +148,8 @@ class FilterHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text="🔄 Фильтр эффектов сброшен\n\n"
-                       "Теперь показываются все асаны с любыми эффектами.",
-                reply_markup=self.keyboard_service.create_main_menu()
+                text=t(lang, 'flt_effect_reset'),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
             return
         
@@ -154,7 +178,7 @@ class FilterHandlers:
         # Получаем данные эффекта
         logger.info("Getting effect emoji and text")
         effect_emoji = self._get_effect_emoji(effect)
-        effect_text = self._get_effect_text(effect)
+        effect_text = self._get_effect_text(lang, effect)
         logger.info(f"Effect emoji: {effect_emoji}, text: {effect_text}")
         
         # Если эффект уже выбран, просто показываем уведомление
@@ -162,7 +186,7 @@ class FilterHandlers:
             logger.info(f"Effect {effect} already selected, showing notification")
             await self.bot.answer_callback_query(
                 callback_query.id,
-                text=f"Фильтр '{effect_text}' уже выбран",
+                text=t(lang, 'flt_effect_selected', effect=effect_text),
                 show_alert=True
             )
             return
@@ -190,17 +214,15 @@ class FilterHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text="😔 Асан с таким эффектом не найдено\n\n"
-                       "Попробуйте другой эффект или сбросьте фильтр.",
-                reply_markup=self.filter_service.get_effect_filter_keyboard([effect])
+                text=t(lang, 'flt_effect_not_found'),
+                reply_markup=self.filter_service.get_effect_filter_keyboard([effect], lang)
             )
             return
         
         # Формируем уникальный текст с количеством асан
-        filter_text = (f"✅ Фильтр применен!\n\n"
-                       f"Показаны асаны с эффектом: {effect_emoji} {effect_text}\n"
-                       f"Найдено асан: {len(filtered_asanas)}\n\n"
-                       "Выберите асану из списка ниже:")
+        filter_text = t(lang, 'flt_effect_applied',
+                        effect=f"{effect_emoji} {effect_text}",
+                        count=len(filtered_asanas))
         
         # Проверяем, изменилось ли количество асан
         if hasattr(self, '_last_filtered_count') and self._last_filtered_count == len(filtered_asanas):
@@ -208,7 +230,7 @@ class FilterHandlers:
             await self.bot.edit_message_reply_markup(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                reply_markup=self._create_filtered_asanas_keyboard(filtered_asanas)
+                reply_markup=self._create_filtered_asanas_keyboard(filtered_asanas, lang)
             )
         else:
             # Если количество изменилось, редактируем текст
@@ -216,7 +238,7 @@ class FilterHandlers:
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
                 text=filter_text,
-                reply_markup=self._create_filtered_asanas_keyboard(filtered_asanas)
+                reply_markup=self._create_filtered_asanas_keyboard(filtered_asanas, lang)
             )
             self._last_filtered_count = len(filtered_asanas)
     
@@ -225,6 +247,7 @@ class FilterHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Получаем текущие предпочтения
         current_difficulty = None
@@ -234,26 +257,20 @@ class FilterHandlers:
             current_difficulty = self.user_preferences[user_id].difficulty
             current_effects = self.user_preferences[user_id].effects
         
-        filter_menu_text = (
-            "🔍 **Меню фильтров**\n\n"
-            "Выберите, какие асаны показывать:\n\n"
-            "⭐ **По сложности** - от начального до мастерского уровня\n"
-            "🎯 **По эффекту** - для конкретных результатов\n\n"
-            "Фильтры помогут найти асаны под ваши цели!"
-        )
+        filter_menu_text = t(lang, 'flt_menu_title')
         
         filter_keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
-                    {"text": "⭐ Фильтр по сложности", "callback_data": "filter_difficulty_menu"},
-                    {"text": "🎯 Фильтр по эффектам", "callback_data": "filter_effect_menu"}
+                    {"text": t(lang, 'flt_btn_difficulty'), "callback_data": "filter_difficulty_menu"},
+                    {"text": t(lang, 'flt_btn_effect'), "callback_data": "filter_effect_menu"}
                 ],
                 [
-                    {"text": "🧘 Асана дня", "callback_data": "daily_asana"},
-                    {"text": "🔄 Сбросить все", "callback_data": "filter_reset_all"}
+                    {"text": t(lang, 'flt_btn_daily'), "callback_data": "daily_asana"},
+                    {"text": t(lang, 'flt_btn_reset_all'), "callback_data": "filter_reset_all"}
                 ],
                 [
-                    {"text": "🔙 В главное меню", "callback_data": "main_menu"}
+                    {"text": t(lang, 'btn_back_main'), "callback_data": "main_menu"}
                 ]
             ]
         )
@@ -271,6 +288,7 @@ class FilterHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         current_difficulty = None
         
         if user_id in self.user_preferences:
@@ -279,10 +297,9 @@ class FilterHandlers:
         await self.bot.edit_message_text(
             chat_id=user_id,
             message_id=callback_query.message.message_id,
-            text="⭐ **Выберите сложность асан:**\n\n"
-                   "Фильтр покажет только асаны выбранного уровня сложности.",
+            text=t(lang, 'flt_difficulty_menu_title'),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=self.filter_service.get_difficulty_filter_keyboard(current_difficulty)
+            reply_markup=self.filter_service.get_difficulty_filter_keyboard(current_difficulty, lang)
         )
     
     async def show_effect_filter_menu(self, callback_query: types.CallbackQuery):
@@ -290,6 +307,7 @@ class FilterHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         current_effects = None
         
         if user_id in self.user_preferences:
@@ -298,10 +316,9 @@ class FilterHandlers:
         await self.bot.edit_message_text(
             chat_id=user_id,
             message_id=callback_query.message.message_id,
-            text="🎯 **Выберите желаемый эффект:**\n\n"
-                   "Фильтр покажет асаны, которые помогают достичь выбранного результата.",
+            text=t(lang, 'flt_effect_menu_title'),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=self.filter_service.get_effect_filter_keyboard(current_effects)
+            reply_markup=self.filter_service.get_effect_filter_keyboard(current_effects, lang)
         )
     
     async def show_daily_asana(self, callback_query: types.CallbackQuery):
@@ -309,6 +326,7 @@ class FilterHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Получаем случайную асану через data_service
         daily_asana_data = self.data_service.get_random_asana()
@@ -317,9 +335,8 @@ class FilterHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text="😔 Асаны дня временно недоступны\n\n"
-                       "Попробуйте выбрать асану из каталога.",
-                reply_markup=self.keyboard_service.create_main_menu()
+                text=t(lang, 'flt_daily_unavailable'),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
             return
         
@@ -337,12 +354,11 @@ class FilterHandlers:
         
         # Формируем текст
         asana_text = (
-            f"🧘‍♂️ **Асана дня**\n\n"
+            f"{t(lang, 'daily_asana_title')}\n\n"
             f"**{daily_asana_data.name}**\n\n"
             f"{description}\n\n"
-            f"Сложность: {self._get_difficulty_stars(daily_asana_data.difficulty)} "
-            f"({self._get_difficulty_text(daily_asana_data.difficulty)})\n"
-            "⏰ Практикуй сегодня и будь здоров!"
+            f"{t(lang, 'flt_difficulty_full', stars=self._get_difficulty_stars(daily_asana_data.difficulty), difficulty=self._get_difficulty_text(lang, daily_asana_data.difficulty))}\n"
+            f"{t(lang, 'flt_practice_today')}"
         )
         
         # Отправляем с фото или без
@@ -353,14 +369,14 @@ class FilterHandlers:
                     photo=image_path,
                     caption=asana_text,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=self.keyboard_service.create_main_menu()
+                    reply_markup=self.keyboard_service.create_main_menu(lang)
                 )
             else:
                 await self.bot.send_message(
                     chat_id=user_id,
                     text=asana_text,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=self.keyboard_service.create_main_menu()
+                    reply_markup=self.keyboard_service.create_main_menu(lang)
                 )
         except Exception as e:
             logger.error(f"Error sending daily asana: {e}")
@@ -368,7 +384,7 @@ class FilterHandlers:
                 chat_id=user_id,
                 text=asana_text,
                 parse_mode=ParseMode.MARKDOWN,
-                reply_markup=self.keyboard_service.create_main_menu()
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
     
     async def reset_all_filters(self, callback_query: types.CallbackQuery):
@@ -376,6 +392,7 @@ class FilterHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         if user_id in self.user_preferences:
             del self.user_preferences[user_id]
@@ -383,9 +400,8 @@ class FilterHandlers:
         await self.bot.edit_message_text(
             chat_id=user_id,
             message_id=callback_query.message.message_id,
-            text="🔄 Все фильтры сброшены\n\n"
-                   "Теперь показываются все асаны без ограничений.",
-            reply_markup=self.keyboard_service.create_main_menu()
+            text=t(lang, 'flt_reset_all'),
+            reply_markup=self.keyboard_service.create_main_menu(lang)
         )
     
     async def filtered_asana_callback(self, callback_query: types.CallbackQuery):
@@ -404,22 +420,23 @@ class FilterHandlers:
             if not hasattr(self, 'filtered_asanas_cache') or asana_index >= len(self.filtered_asanas_cache):
                 await self.bot.send_message(
                     chat_id=callback_query.from_user.id,
-                    text="Ошибка: асана не найдена. Попробуйте снова.",
-                    reply_markup=self.keyboard_service.create_main_menu()
+                    text=t(self._lang(callback_query.from_user.id), 'flt_err_not_found'),
+                    reply_markup=self.keyboard_service.create_main_menu(self._lang(callback_query.from_user.id))
                 )
                 return
             
             asana = self.filtered_asanas_cache[asana_index]
             asana_name = asana.name
             user_id = callback_query.from_user.id
+            lang = self._lang(user_id)
             
             # Получаем данные асаны
             asana_data = self.data_service.get_asana_data(asana_name)
             if not asana_data:
                 await self.bot.send_message(
                     chat_id=user_id,
-                    text=f"Асана '{asana_name}' не найдена.",
-                    reply_markup=self.keyboard_service.create_main_menu()
+                    text=t(lang, 'flt_err_asana_missing', name=asana_name),
+                    reply_markup=self.keyboard_service.create_main_menu(lang)
                 )
                 return
             
@@ -432,10 +449,10 @@ class FilterHandlers:
                 # Обрезаем описание до 800 символов (оставляем место для сложности)
                 max_content_length = 800
                 if len(content) > max_content_length:
-                    content = content[:max_content_length] + "...\n\n*Описание сокращено*"
+                    content = content[:max_content_length] + t(lang, 'flt_truncated')
                 asana_text += content
             
-            asana_text += f"\n\nСложность: {self._get_difficulty_stars(ASANA_DIFFICULTY.get(asana_name, 1))}"
+            asana_text += f"\n\n{t(lang, 'daily_difficulty', stars=self._get_difficulty_stars(ASANA_DIFFICULTY.get(asana_name, 1)))}"
             
             # Проверяем общую длину (Telegram лимит - 1024 символа)
             if len(asana_text) > 1024:
@@ -455,14 +472,14 @@ class FilterHandlers:
                         photo=input_file,
                         caption=asana_text,
                         parse_mode=ParseMode.MARKDOWN,
-                        reply_markup=self.keyboard_service.create_back_to_filters_menu()
+                        reply_markup=self.keyboard_service.create_back_to_filters_menu(lang)
                     )
                 else:
                     await self.bot.send_message(
                         chat_id=user_id,
                         text=asana_text,
                         parse_mode=ParseMode.MARKDOWN,
-                        reply_markup=self.keyboard_service.create_back_to_filters_menu()
+                        reply_markup=self.keyboard_service.create_back_to_filters_menu(lang)
                     )
             except Exception as e:
                 logger.error(f"Error sending filtered asana: {e}")
@@ -470,43 +487,35 @@ class FilterHandlers:
                     chat_id=user_id,
                     text=asana_text,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=self.keyboard_service.create_back_to_filters_menu()
+                    reply_markup=self.keyboard_service.create_back_to_filters_menu(lang)
                 )
                 
         except (ValueError, IndexError) as e:
             logger.error(f"Error parsing filtered_asana callback: {e}")
             await self.bot.send_message(
                 chat_id=callback_query.from_user.id,
-                text="Ошибка: неверный формат данных. Попробуйте снова.",
-                reply_markup=self.keyboard_service.create_main_menu()
+                text=t(self._lang(callback_query.from_user.id), 'flt_err_bad_data'),
+                reply_markup=self.keyboard_service.create_main_menu(self._lang(callback_query.from_user.id))
             )
     
     def _get_difficulty_stars(self, difficulty: int) -> str:
         """Получить звездное представление сложности"""
         return "⭐" * difficulty
     
-    def _get_difficulty_text(self, difficulty: int) -> str:
+    def _get_difficulty_text(self, lang: str, difficulty: int) -> str:
         """Получить текстовое представление сложности"""
-        texts = {
-            1: "Начальный",
-            2: "Средний",
-            3: "Продвинутый",
-            4: "Экспертный",
-            5: "Мастерский"
-        }
-        return texts.get(difficulty, "Неизвестно")
+        return t(lang, _DIFF_TEXT_KEYS.get(difficulty, 'flt_diff_unknown'))
     
     def _get_effect_emoji(self, effect: str) -> str:
         """Получить эмодзи для эффекта"""
         from src.models.data_models import AsanaEffect
         return AsanaEffect.get_emoji(effect)
     
-    def _get_effect_text(self, effect: str) -> str:
+    def _get_effect_text(self, lang: str, effect: str) -> str:
         """Получить текстовое представление эффекта"""
-        from src.models.data_models import AsanaEffect
-        return AsanaEffect.get_description(effect)
+        return t(lang, _EFFECT_TEXT_KEYS.get(effect, 'flt_effect_unknown'))
     
-    def _create_filtered_asanas_keyboard(self, filtered_asanas: List[AsanaData]) -> InlineKeyboardMarkup:
+    def _create_filtered_asanas_keyboard(self, filtered_asanas: List[AsanaData], lang: str = 'ru') -> InlineKeyboardMarkup:
         """Создать клавиатуру с отфильтрованными асанами"""
         from aiogram.types import InlineKeyboardButton
         
@@ -522,6 +531,6 @@ class FilterHandlers:
         self.filtered_asanas_cache = filtered_asanas
         
         # Добавляем навигацию
-        keyboard.append([InlineKeyboardButton(text="🔙 Назад", callback_data="filter_menu")])
+        keyboard.append([InlineKeyboardButton(text=t(lang, 'btn_back'), callback_data="filter_menu")])
         
         return InlineKeyboardMarkup(inline_keyboard=keyboard)

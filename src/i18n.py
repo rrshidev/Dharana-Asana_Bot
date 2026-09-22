@@ -753,6 +753,80 @@ TRANSLATIONS = {
         'sub_status_trial': '🎯 Пробный период',
         'sub_status_premium': '⭐ Премиум',
         'sub_status_free': '🆓 Бесплатная версия',
+
+        # --- Фильтры (filters) ---
+        'flt_menu_title': '🔍 **Меню фильтров**\n\n'
+                          'Выберите, какие асаны показывать:\n\n'
+                          '⭐ **По сложности** - от начального до мастерского уровня\n'
+                          '🎯 **По эффекту** - для конкретных результатов\n\n'
+                          'Фильтры помогут найти асаны под ваши цели!',
+        'flt_btn_difficulty': '⭐ Фильтр по сложности',
+        'flt_btn_effect': '🎯 Фильтр по эффектам',
+        'flt_btn_daily': '🧘 Асана дня',
+        'flt_btn_reset_all': '🔄 Сбросить все',
+        'flt_difficulty_menu_title': '⭐ **Выберите сложность асан:**\n\n'
+                                     'Фильтр покажет только асаны выбранного уровня сложности.',
+        'flt_effect_menu_title': '🎯 **Выберите желаемый эффект:**\n\n'
+                                 'Фильтр покажет асаны, которые помогают достичь выбранного результата.',
+        'flt_difficulty_reset': '🔄 Фильтр сложности сброшен\n\n'
+                                'Теперь показываются все асаны любого уровня сложности.',
+        'flt_effect_reset': '🔄 Фильтр эффектов сброшен\n\n'
+                            'Теперь показываются все асаны с любыми эффектами.',
+        'flt_reset_all': '🔄 Все фильтры сброшены\n\n'
+                         'Теперь показываются все асаны без ограничений.',
+        'flt_diff_not_found': '😔 Асан с таким уровнем сложности не найдено\n\n'
+                              'Попробуйте другой уровень сложности или сбросьте фильтр.',
+        'flt_effect_not_found': '😔 Асан с таким эффектом не найдено\n\n'
+                                'Попробуйте другой эффект или сбросьте фильтр.',
+        'flt_diff_applied': '✅ Фильтр применен!\n\n'
+                            'Показаны асаны сложности: {stars} ({difficulty})\n'
+                            'Найдено асан: {count}\n\n'
+                            'Выберите асану из списка ниже:',
+        'flt_effect_applied': '✅ Фильтр применен!\n\n'
+                              'Показаны асаны с эффектом: {effect}\n'
+                              'Найдено асан: {count}\n\n'
+                              'Выберите асану из списка ниже:',
+        'flt_effect_selected': "Фильтр '{effect}' уже выбран",
+        'flt_btn_reset_filter': '🔄 Сбросить фильтр',
+        'flt_daily_unavailable': '😔 Асаны дня временно недоступны\n\n'
+                                 'Попробуйте выбрать асану из каталога.',
+        'flt_difficulty_full': 'Сложность: {stars} ({difficulty})',
+        'flt_practice_today': '⏰ Практикуй сегодня и будь здоров!',
+        'flt_err_not_found': 'Ошибка: асана не найдена. Попробуйте снова.',
+        'flt_err_asana_missing': "Асана '{name}' не найдена.",
+        'flt_truncated': '...\n\n*Описание сокращено*',
+        'flt_err_bad_data': 'Ошибка: неверный формат данных. Попробуйте снова.',
+        'flt_diff_1': 'Начальный',
+        'flt_diff_2': 'Средний',
+        'flt_diff_3': 'Продвинутый',
+        'flt_diff_4': 'Экспертный',
+        'flt_diff_5': 'Мастерский',
+        'flt_diff_unknown': 'Неизвестно',
+        'flt_effect_back_pain': 'Снять боль в спине',
+        'flt_effect_calm_mind': 'Успокоить ум',
+        'flt_effect_boost_energy': 'Повысить энергию',
+        'flt_effect_digestion': 'Улучшить пищеварение',
+        'flt_effect_flexibility': 'Повысить гибкость',
+        'flt_effect_balance': 'Улучшить баланс',
+        'flt_effect_strength': 'Укрепить мышцы',
+        'flt_effect_stress_relief': 'Снять стресс',
+        'flt_effect_unknown': 'Улучшить самочувствие',
+        'flt_hint_hard': '😰 Эта асана кажется сложной?',
+        'flt_hint_contraindications': '⚠️ Есть противопоказания?',
+        'flt_premium_block_title': '💎 В платной версии есть:\n',
+        'flt_premium_item_video': '• 📹 Видео-разбор с деталями\n',
+        'flt_premium_item_variants': '• 🔄 Облегченные варианты\n',
+        'flt_premium_item_alt': '• ⚖️ Безопасные альтернативы\n',
+        'flt_premium_cta': '\n👉 Хочешь открыть доступ?',
+        'flt_offer_title': '🔥 Вижу, вам нравится асана «{name}»!\n\n',
+        'flt_offer_block_title': '💎 В премиум версии доступно:\n',
+        'flt_offer_item_variations': '• 📹 5 вариаций асаны «{name}»\n',
+        'flt_offer_item_video': '• 🎥 Видео-отстройка с анатомией\n',
+        'flt_offer_item_mistakes': '• 🔍 Разбор типичных ошибок\n',
+        'flt_offer_item_personal': '• 🧘 Персональные комплексы\n',
+        'flt_offer_cta': '\n🚀 Откройте полный потенциал практики!',
+        'flt_btn_all_asanas': '📚 Все асаны',
+        'flt_btn_another_asana': '🎲 Другая асана',
     },
 
     'en': {
@@ -1400,5 +1474,79 @@ TRANSLATIONS = {
         'sub_status_trial': '🎯 Trial period',
         'sub_status_premium': '⭐ Premium',
         'sub_status_free': '🆓 Free version',
+
+        # --- Filters ---
+        'flt_menu_title': '🔍 **Asana filters**\n\n'
+                          'Choose which asanas to show:\n\n'
+                          '⭐ **By difficulty** - from beginner to master level\n'
+                          '🎯 **By effect** - for specific results\n\n'
+                          'Filters help you find asanas for your goals!',
+        'flt_btn_difficulty': '⭐ Filter by difficulty',
+        'flt_btn_effect': '🎯 Filter by effects',
+        'flt_btn_daily': '🧘 Asana of the day',
+        'flt_btn_reset_all': '🔄 Reset all',
+        'flt_difficulty_menu_title': '⭐ **Choose the asana difficulty:**\n\n'
+                                     'The filter will show only asanas of the selected difficulty level.',
+        'flt_effect_menu_title': '🎯 **Choose the desired effect:**\n\n'
+                                 'The filter will show asanas that help achieve the selected result.',
+        'flt_difficulty_reset': '🔄 Difficulty filter reset\n\n'
+                                'Now asanas of any difficulty level are shown.',
+        'flt_effect_reset': '🔄 Effect filter reset\n\n'
+                            'Now asanas with any effects are shown.',
+        'flt_reset_all': '🔄 All filters reset\n\n'
+                         'Now all asanas are shown without restrictions.',
+        'flt_diff_not_found': '😔 No asanas found for this difficulty level\n\n'
+                              'Try another difficulty level or reset the filter.',
+        'flt_effect_not_found': '😔 No asanas found for this effect\n\n'
+                                'Try another effect or reset the filter.',
+        'flt_diff_applied': '✅ Filter applied!\n\n'
+                            'Showing asanas of difficulty: {stars} ({difficulty})\n'
+                            'Asanas found: {count}\n\n'
+                            'Choose an asana from the list below:',
+        'flt_effect_applied': '✅ Filter applied!\n\n'
+                              'Showing asanas with effect: {effect}\n'
+                              'Asanas found: {count}\n\n'
+                              'Choose an asana from the list below:',
+        'flt_effect_selected': "Filter '{effect}' is already selected",
+        'flt_btn_reset_filter': '🔄 Reset filter',
+        'flt_daily_unavailable': '😔 Asana of the day is temporarily unavailable\n\n'
+                                 'Try choosing an asana from the catalog.',
+        'flt_difficulty_full': 'Difficulty: {stars} ({difficulty})',
+        'flt_practice_today': '⏰ Practice today and be healthy!',
+        'flt_err_not_found': 'Error: asana not found. Please try again.',
+        'flt_err_asana_missing': "Asana '{name}' not found.",
+        'flt_truncated': '...\n\n*Description shortened*',
+        'flt_err_bad_data': 'Error: invalid data format. Please try again.',
+        'flt_diff_1': 'Beginner',
+        'flt_diff_2': 'Intermediate',
+        'flt_diff_3': 'Advanced',
+        'flt_diff_4': 'Expert',
+        'flt_diff_5': 'Master',
+        'flt_diff_unknown': 'Unknown',
+        'flt_effect_back_pain': 'Relieve back pain',
+        'flt_effect_calm_mind': 'Calm the mind',
+        'flt_effect_boost_energy': 'Boost energy',
+        'flt_effect_digestion': 'Improve digestion',
+        'flt_effect_flexibility': 'Increase flexibility',
+        'flt_effect_balance': 'Improve balance',
+        'flt_effect_strength': 'Strengthen muscles',
+        'flt_effect_stress_relief': 'Relieve stress',
+        'flt_effect_unknown': 'Improve well-being',
+        'flt_hint_hard': '😰 Does this asana seem difficult?',
+        'flt_hint_contraindications': '⚠️ Are there contraindications?',
+        'flt_premium_block_title': '💎 The paid version includes:\n',
+        'flt_premium_item_video': '• 📹 Video breakdown with details\n',
+        'flt_premium_item_variants': '• 🔄 Easier variations\n',
+        'flt_premium_item_alt': '• ⚖️ Safe alternatives\n',
+        'flt_premium_cta': '\n👉 Want to unlock access?',
+        'flt_offer_title': '🔥 I see you like the asana «{name}»!\n\n',
+        'flt_offer_block_title': '💎 The premium version includes:\n',
+        'flt_offer_item_variations': '• 📹 5 variations of the asana «{name}»\n',
+        'flt_offer_item_video': '• 🎥 Video alignment with anatomy\n',
+        'flt_offer_item_mistakes': '• 🔍 Analysis of typical mistakes\n',
+        'flt_offer_item_personal': '• 🧘 Personal sequences\n',
+        'flt_offer_cta': '\n🚀 Unlock the full potential of your practice!',
+        'flt_btn_all_asanas': '📚 All asanas',
+        'flt_btn_another_asana': '🎲 Another asana',
     },
 }
