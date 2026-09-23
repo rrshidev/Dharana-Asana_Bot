@@ -8,6 +8,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from src.i18n import t, format_duration
 from src.services.timer_service import timer_service
 from src.services.database_service import db_service
+from src.services.user_service import UserService
 from src.utils.timer_ui import TimerUI
 from src.models.timer_models import TimerType, TimerStatus, TimerPhase, TimerConfig, PranayamaConfig, timer_messages, practice_asana_context, sequence_advance_callbacks
 
@@ -17,10 +18,11 @@ logger = logging.getLogger(__name__)
 class TimerHandlers:
     """Обработчики для таймера медитации, асан и пранаямы"""
 
-    def __init__(self, bot, data_service, keyboard_service):
+    def __init__(self, bot, data_service, keyboard_service, user_service=None):
         self.bot = bot
         self.data_service = data_service
         self.keyboard_service = keyboard_service
+        self.user_service = user_service or UserService()  # запись практики в общую статистику
         self.awaiting_meditation_time = set()  # пользователи, ожидающие ввода времени медитации
         # Импортируем message_handlers для доступа к поиску асан
         from src.handlers.message_handlers import MessageHandlers
@@ -750,6 +752,24 @@ class TimerHandlers:
                                 practice_asana_context.pop(user_id, None)
                                 timer_message_id = timer_messages.get(user_id)
                                 timer_service.delete_session(user_id)
+
+                                # Записываем завершённую практику в общую статистику Dharana
+                                # (контракт как у timersana: POST /api/v1/practice/timer).
+                                # Сбой записи не должен ломать завершение практики.
+                                try:
+                                    practice_seconds = max(
+                                        updated_session.total_elapsed,
+                                        updated_session.elapsed,
+                                    )
+                                    await self.user_service.record_practice(
+                                        telegram_id=user_id,
+                                        practice_type=updated_session.timer_type.value,
+                                        total_duration_seconds=practice_seconds,
+                                        started_at=updated_session.start_time,
+                                        completed_at=updated_session.completed_at,
+                                    )
+                                except Exception as e:
+                                    logger.error(f"Ошибка записи практики для {user_id}: {e}")
 
                                 # Автопереход к следующей асане последовательности
                                 advance_cb = sequence_advance_callbacks.get(user_id)

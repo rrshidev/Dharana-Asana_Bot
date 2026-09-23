@@ -1,0 +1,82 @@
+﻿name: Deploy Yoga Bot
+
+on:
+  push:
+    branches: [main, "feature/*"]
+  workflow_dispatch:
+
+# РџРѕР»РЅС‹Р№ CI РѕСЃРЅРѕРІРЅРѕРіРѕ Р±РѕС‚Р° РїРѕ РѕР±СЂР°Р·С†Сѓ timerasana/timerasana:
+# push РІ main/feature/* РёР»Рё СЂСѓС‡РЅРѕР№ Р·Р°РїСѓСЃРє в†’ С‚РµСЃС‚С‹ в†’ СѓРїР°РєРѕРІРєР° РёСЃС…РѕРґРЅРёРєРѕРІ в†’ scp РЅР° VPS
+# (/tmp/dharana_deploy_* в†’ sudo tar РІ /opt/dharana) в†’ РїРµСЂРµСЃР±РѕСЂРєР° РєРѕРЅС‚РµР№РЅРµСЂР° yoga-bot,
+# Р·Р°РїРёСЃСЊ РїСЂР°РєС‚РёРє РІ РѕР±С‰СѓСЋ СЃС‚Р°С‚РёСЃС‚РёРєСѓ Dharana (API_URL + TIMER_BOT_KEY).
+# РўСЂРµР±СѓРµРјС‹Рµ secrets (repository в†’ Settings в†’ Secrets and variables в†’ Actions):
+#   DHARANA_SSH_HOST, DHARANA_SSH_PORT, DHARANA_SSH_USER, DHARANA_SSH_KEY
+# (РѕС‚Рѕ Р¶Рµ, С‡С‚Рѕ РІ dharana-api/dharana_web_app/timerasana deploy workflows)
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-asyncio
+
+      - name: Syntax check
+        run: |
+          python -m py_compile src/handlers/timer_handlers.py src/services/user_service.py main.py
+
+      - name: Run tests
+        run: pytest -q
+
+  deploy:
+    name: Deploy to VPS
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/')))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package sources
+        run: |
+          tar -czf yoga-bot.tar.gz main.py requirements.txt config.py src .env.example Dockerfile docker-compose.yml
+
+      - name: Copy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DHARANA_SSH_HOST }}
+          port: ${{ secrets.DHARANA_SSH_PORT }}
+          username: ${{ secrets.DHARANA_SSH_USER }}
+          key: ${{ secrets.DHARANA_SSH_KEY }}
+          source: "yoga-bot.tar.gz"
+          target: "/tmp/dharana_deploy_${{ github.run_id }}"
+
+      - name: Extract, rebuild, restart, verify
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DHARANA_SSH_HOST }}
+          port: ${{ secrets.DHARANA_SSH_PORT }}
+          username: ${{ secrets.DHARANA_SSH_USER }}
+          key: ${{ secrets.DHARANA_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/dharana
+            sudo tar -xzf /tmp/dharana_deploy_${{ github.run_id }}/yoga-bot.tar.gz -C ./yoga-bot
+            sudo docker compose build yoga-bot
+            sudo docker compose up -d yoga-bot || true
+            sleep 6
+            sudo docker logs yoga-asana-bot --tail 20 || true
+
