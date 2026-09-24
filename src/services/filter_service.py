@@ -7,8 +7,29 @@ from aiogram.enums import ParseMode
 
 from src.models.data_models import AsanaData, AsanaDifficulty, AsanaEffect, UserPreferences
 from src.services.data_service import DataService
+from src.i18n import t
+from src.services.database_service import db_service
 
 logger = logging.getLogger(__name__)
+
+_DIFF_TEXT_KEYS = {
+    1: 'flt_diff_1',
+    2: 'flt_diff_2',
+    3: 'flt_diff_3',
+    4: 'flt_diff_4',
+    5: 'flt_diff_5',
+}
+
+_EFFECT_TEXT_KEYS = {
+    'back_pain': 'flt_effect_back_pain',
+    'calm_mind': 'flt_effect_calm_mind',
+    'boost_energy': 'flt_effect_boost_energy',
+    'digestion': 'flt_effect_digestion',
+    'flexibility': 'flt_effect_flexibility',
+    'balance': 'flt_effect_balance',
+    'strength': 'flt_effect_strength',
+    'stress_relief': 'flt_effect_stress_relief',
+}
 
 
 class FilterService:
@@ -18,13 +39,13 @@ class FilterService:
         self.data_service = data_service
         self.daily_asana = {}  # user_id -> (asana_name, date)
     
-    def get_difficulty_filter_keyboard(self, current_difficulty: Optional[int] = None) -> Dict:
+    def get_difficulty_filter_keyboard(self, current_difficulty: Optional[int] = None, lang: str = 'ru') -> Dict:
         """Получить клавиатуру для фильтра сложности"""
         keyboard = []
         
         for difficulty in range(1, 6):
             stars = AsanaDifficulty.get_stars(difficulty)
-            description = AsanaDifficulty.get_description(difficulty)
+            description = t(lang, _DIFF_TEXT_KEYS.get(difficulty, 'flt_diff_unknown'))
             
             if current_difficulty == difficulty:
                 text = f"✅ {stars} {description}"
@@ -39,18 +60,18 @@ class FilterService:
         # Добавляем кнопку "Сбросить"
         if current_difficulty:
             keyboard.append([{
-                "text": "🔄 Сбросить фильтр",
+                "text": t(lang, 'flt_btn_reset_filter'),
                 "callback_data": "filter_difficulty_reset"
             }])
         
         keyboard.append([{
-            "text": "🔙 Назад",
+            "text": t(lang, 'btn_back'),
             "callback_data": "filter_menu"
         }])
         
         return {"inline_keyboard": keyboard}
     
-    def get_effect_filter_keyboard(self, current_effects: Optional[List[str]] = None) -> Dict:
+    def get_effect_filter_keyboard(self, current_effects: Optional[List[str]] = None, lang: str = 'ru') -> Dict:
         """Получить клавиатуру для фильтра эффектов"""
         keyboard = []
         
@@ -68,7 +89,7 @@ class FilterService:
         
         for effect in main_effects:
             emoji = AsanaEffect.get_emoji(effect)
-            description = AsanaEffect.get_description(effect)
+            description = t(lang, _EFFECT_TEXT_KEYS.get(effect, 'flt_effect_unknown'))
             
             if current_effects and effect in current_effects:
                 text = f"✅ {emoji} {description}"
@@ -83,12 +104,12 @@ class FilterService:
         # Добавляем кнопку "Сбросить"
         if current_effects:
             keyboard.append([{
-                "text": "🔄 Сбросить фильтр",
+                "text": t(lang, 'flt_btn_reset_filter'),
                 "callback_data": "filter_effect_reset"
             }])
         
         keyboard.append([{
-            "text": "🔙 Назад",
+            "text": t(lang, 'btn_back'),
             "callback_data": "filter_menu"
         }])
         
@@ -141,6 +162,7 @@ class FilterService:
     
     def get_asana_with_premium_hint(self, asana: AsanaData, user_id: int) -> Tuple[str, bool]:
         """Получить описание асаны с подсказкой о платной версии"""
+        lang = db_service.get_user_language(user_id)
         description = asana.description
         
         # Проверяем сложность асаны
@@ -154,18 +176,18 @@ class FilterService:
             premium_hints = []
             
             if needs_premium_hint:
-                premium_hints.append("😰 Эта асана кажется сложной?")
+                premium_hints.append(t(lang, 'flt_hint_hard'))
             
             if has_contraindications:
-                premium_hints.append("⚠️ Есть противопоказания?")
+                premium_hints.append(t(lang, 'flt_hint_contraindications'))
             
             if premium_hints:
                 description += f"\n\n{' '.join(premium_hints)}\n"
-                description += "💎 В платной версии есть:\n"
-                description += "• 📹 Видео-разбор с деталями\n"
-                description += "• 🔄 Облегченные варианты\n"
-                description += "• ⚖️ Безопасные альтернативы\n"
-                description += "\n👉 Хочешь открыть доступ?"
+                description += t(lang, 'flt_premium_block_title')
+                description += t(lang, 'flt_premium_item_video')
+                description += t(lang, 'flt_premium_item_variants')
+                description += t(lang, 'flt_premium_item_alt')
+                description += t(lang, 'flt_premium_cta')
         
         return description, needs_premium_hint or has_contraindications
     
@@ -175,16 +197,16 @@ class FilterService:
         # TODO: В будущем это будет работать с базой данных просмотров
         return view_count >= 3
     
-    def get_premium_offer_text(self, asana_name: str) -> str:
+    def get_premium_offer_text(self, asana_name: str, lang: str = 'ru') -> str:
         """Получить текст предложения о платной версии"""
         return (
-            f"🔥 Вижу, вам нравится асана «{asana_name}»!\n\n"
-            "💎 В премиум версии доступно:\n"
-            f"• 📹 5 вариаций асаны «{asana_name}»\n"
-            "• 🎥 Видео-отстройка с анатомией\n"
-            "• 🔍 Разбор типичных ошибок\n"
-            "• 🧘 Персональные комплексы\n\n"
-            "🚀 Откройте полный потенциал практики!"
+            t(lang, 'flt_offer_title', name=asana_name) +
+            t(lang, 'flt_offer_block_title') +
+            t(lang, 'flt_offer_item_variations', name=asana_name) +
+            t(lang, 'flt_offer_item_video') +
+            t(lang, 'flt_offer_item_mistakes') +
+            t(lang, 'flt_offer_item_personal') +
+            t(lang, 'flt_offer_cta')
         )
 
 
@@ -209,20 +231,21 @@ class AsanaDayNotifier:
             daily_asana, user_id
         )
         
+        lang = db_service.get_user_language(user_id)
+        
         try:
             await self.bot.send_photo(
                 chat_id=user_id,
                 photo=daily_asana.image_path,
-                caption=f"🧘‍♂️ **Асана дня**\n\n"
+                caption=f"{t(lang, 'daily_asana_title')}\n\n"
                        f"**{daily_asana.name}**\n\n"
                        f"{description}\n\n"
-                       f"Сложность: {AsanaDifficulty.get_stars(daily_asana.difficulty)} "
-                       f"({AsanaDifficulty.get_description(daily_asana.difficulty)})\n"
-                       "⏰ Практикуй сегодня и будь здоров!",
+                       f"{t(lang, 'flt_difficulty_full', stars=AsanaDifficulty.get_stars(daily_asana.difficulty), difficulty=t(lang, _DIFF_TEXT_KEYS.get(daily_asana.difficulty, 'flt_diff_unknown')))}\n"
+                       f"{t(lang, 'flt_practice_today')}",
                 reply_markup={
                     "inline_keyboard": [[
-                        {"text": "📚 Все асаны", "callback_data": "catalog"},
-                        {"text": "🎲 Другая асана", "callback_data": "random_asana"}
+                        {"text": t(lang, 'flt_btn_all_asanas'), "callback_data": "catalog"},
+                        {"text": t(lang, 'flt_btn_another_asana'), "callback_data": "random_asana"}
                     ]]
                 },
                 parse_mode=ParseMode.MARKDOWN

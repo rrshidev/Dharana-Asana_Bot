@@ -4,6 +4,7 @@ from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from src.i18n import t, format_duration, format_cycles
 from src.services.database_service import db_service
 from src.services.data_service import DataService
 from src.services.daily_asana_scheduler import DailyAsanaScheduler
@@ -20,6 +21,27 @@ class DailyAsanaHandlers:
         self.keyboard_service = KeyboardService()
         self.scheduler = DailyAsanaScheduler(bot, data_service)
     
+    @staticmethod
+    def _lang(user_id: int) -> str:
+        """Язык пользователя ('ru'|'en')."""
+        return db_service.get_user_language(user_id)
+    
+    @staticmethod
+    def _format_work_rest_short(lang: str, seconds: int) -> str:
+        """'30 сек'/'1 мин' (RU) или '30 s'/'1 min' (EN)."""
+        if seconds % 60 == 0:
+            return f"{seconds // 60} {t(lang, 'daily_min_label')}"
+        return f"{seconds} {t(lang, 'daily_sec_label')}"
+    
+    @staticmethod
+    def _localized_cycles(lang: str, cycles: int) -> str:
+        """'бесконечно'/'5 циклов' (RU, как раньше) или 'infinite'/'5 cycles' (EN)."""
+        if cycles == 0:
+            return t(lang, 'daily_infinite_text')
+        if lang == 'en':
+            return format_cycles(lang, cycles)
+        return f"{cycles} циклов"
+    
     async def start_scheduler(self):
         """Запустить планировщик"""
         await self.scheduler.start_scheduler()
@@ -31,6 +53,7 @@ class DailyAsanaHandlers:
     async def daily_asana_command(self, message: types.Message):
         """Команда /asana_day - показать асану дня с настройкой"""
         user_id = message.from_user.id
+        lang = self._lang(user_id)
         
         # Регистрируем/обновляем пользователя в БД
         user = db_service.get_or_create_user(
@@ -48,14 +71,14 @@ class DailyAsanaHandlers:
         else:
             # Не первый раз - показываем настройки асаны дня
             settings_text = (
-                f"⏰ **Настройки асаны дня**\n\n"
-                f"Текущее время: {fresh_user.daily_asana_time.strftime('%H:%M') if fresh_user.daily_asana_time else '09:00'}\n"
-                f"Часовой пояс: {fresh_user.timezone if fresh_user.timezone else 'UTC'}\n"
-                f"Статус: {'✅ Включено' if fresh_user.daily_asana_enabled else '❌ Выключено'}\n\n"
-                f"Выберите время для получения асаны дня:"
+                f"{t(lang, 'daily_settings_title')}\n\n"
+                f"{t(lang, 'daily_current_time', time=fresh_user.daily_asana_time.strftime('%H:%M') if fresh_user.daily_asana_time else '09:00')}\n"
+                f"{t(lang, 'daily_time_zone', tz=fresh_user.timezone if fresh_user.timezone else 'UTC')}\n"
+                f"{t(lang, 'daily_status', status=t(lang, 'daily_status_on') if fresh_user.daily_asana_enabled else t(lang, 'daily_status_off'))}\n\n"
+                f"{t(lang, 'daily_choose_time')}"
             )
             
-            keyboard = self._create_time_selection_keyboard()
+            keyboard = self._create_time_selection_keyboard(lang)
             
             await message.answer(
                 settings_text,
@@ -88,17 +111,19 @@ class DailyAsanaHandlers:
     
     async def _show_first_time_setup(self, user_id: int, message_id: int = None):
         """Показать приветствие и настройку для первого раза"""
+        lang = self._lang(user_id)
+        
         welcome_text = (
-            "🌅 **Добро пожаловать в Асану Дня!**\n\n"
-            "Это ежедневная практика для вашей йоги:\n\n"
-            "✅ **Каждый день** новая асана в удобное время\n"
-            "✅ **Автоматические уведомления** - не нужно помнить\n"
-            "✅ **Премиум-подсказки** для сложных асан\n"
-            "✅ **Статистика прогресса** и мотивация\n\n"
-            "🎯 **Выберите время для ежедневной практики:**"
+            f"{t(lang, 'daily_welcome_title')}\n\n"
+            f"{t(lang, 'daily_welcome_intro')}\n\n"
+            f"{t(lang, 'daily_welcome_li1')}\n"
+            f"{t(lang, 'daily_welcome_li2')}\n"
+            f"{t(lang, 'daily_welcome_li3')}\n"
+            f"{t(lang, 'daily_welcome_li4')}\n\n"
+            f"{t(lang, 'daily_welcome_choose')}"
         )
         
-        keyboard = self._create_welcome_time_keyboard()
+        keyboard = self._create_welcome_time_keyboard(lang)
         
         if message_id:
             # Редактируем существующее сообщение
@@ -123,6 +148,7 @@ class DailyAsanaHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Получаем текущие настройки (свежие данные)
         user = db_service.get_user(telegram_id=user_id)
@@ -133,15 +159,15 @@ class DailyAsanaHandlers:
         current_timezone = user.timezone if user.timezone else 'UTC'
         
         settings_text = (
-            f"⏰ **Настройки асаны дня**\n\n"
-            f"Текущее время: {current_time}\n"
-            f"Часовой пояс: {current_timezone}\n"
-            f"Статус: {'✅ Включено' if user.daily_asana_enabled else '❌ Выключено'}\n\n"
-            f"Выберите время для получения асаны дня:"
+            f"{t(lang, 'daily_settings_title')}\n\n"
+            f"{t(lang, 'daily_current_time', time=current_time)}\n"
+            f"{t(lang, 'daily_time_zone', tz=current_timezone)}\n"
+            f"{t(lang, 'daily_status', status=t(lang, 'daily_status_on') if user.daily_asana_enabled else t(lang, 'daily_status_off'))}\n\n"
+            f"{t(lang, 'daily_choose_time')}"
         )
         
         # Создаем клавиатуру с выбором времени
-        keyboard = self._create_time_selection_keyboard()
+        keyboard = self._create_time_selection_keyboard(lang)
         
         await self.bot.edit_message_text(
             chat_id=user_id,
@@ -163,6 +189,7 @@ class DailyAsanaHandlers:
         minute = int(data[4]) if len(data) > 4 else 0
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         new_time = time(hour=hour, minute=minute)
         
         # Обновляем настройки
@@ -175,15 +202,13 @@ class DailyAsanaHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text=f"✅ Время изменено на {new_time.strftime('%H:%M')}\n\n"
-                       f"Теперь я буду присылать вам асану дня в {new_time.strftime('%H:%M')}!\n\n"
-                       f"Хотите настроить что-то еще?",
-                reply_markup=self._create_settings_menu_keyboard()
+                text=t(lang, 'daily_time_changed', time=new_time.strftime('%H:%M')),
+                reply_markup=self._create_settings_menu_keyboard(lang)
             )
         else:
             await self.bot.answer_callback_query(
                 callback_query.id,
-                text="Ошибка при сохранении времени",
+                text=t(lang, 'daily_err_save_time'),
                 show_alert=True
             )
     
@@ -199,6 +224,7 @@ class DailyAsanaHandlers:
         minute = int(data[4]) if len(data) > 4 else 0
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         new_time = time(hour=hour, minute=minute)
         
         # Обновляем настройки
@@ -211,10 +237,10 @@ class DailyAsanaHandlers:
         if success:
             # Показываем подтверждение и первую асану
             confirmation_text = (
-                f"✅ **Отлично! Настройки сохранены**\n\n"
-                f"⏰ Время: {new_time.strftime('%H:%M')}\n"
-                f"📅 Ежедневные уведомления: включены\n\n"
-                f"🎯 **Ваша первая асана дня:**"
+                f"{t(lang, 'daily_saved_ok')}\n\n"
+                f"{t(lang, 'daily_saved_time', time=new_time.strftime('%H:%M'))}\n"
+                f"{t(lang, 'daily_notif_on')}\n\n"
+                f"{t(lang, 'daily_first_asana')}"
             )
             
             await self.bot.edit_message_text(
@@ -231,7 +257,7 @@ class DailyAsanaHandlers:
         else:
             await self.bot.answer_callback_query(
                 callback_query.id,
-                text="Ошибка при сохранении времени",
+                text=t(lang, 'daily_err_save_time'),
                 show_alert=True
             )
     
@@ -240,6 +266,7 @@ class DailyAsanaHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Отключаем уведомления
         success = db_service.update_daily_asana_settings(
@@ -251,10 +278,8 @@ class DailyAsanaHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text="❌ Уведомления асаны дня отключены\n\n"
-                       "Вы всегда можете включить их снова в настройках.\n\n"
-                       "Хотите посмотреть другие функции?",
-                reply_markup=self.keyboard_service.create_main_menu()
+                text=t(lang, 'daily_disabled'),
+                reply_markup=self.keyboard_service.create_main_menu(lang)
             )
     
     async def daily_timezone_settings_callback(self, callback_query: types.CallbackQuery):
@@ -262,6 +287,7 @@ class DailyAsanaHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Получаем текущие настройки
         user = db_service.get_user(telegram_id=user_id)
@@ -271,13 +297,13 @@ class DailyAsanaHandlers:
         current_timezone = user.timezone or 'UTC'
         
         timezone_text = (
-            f"🌍 **Настройки часового пояса**\n\n"
-            f"Текущий часовой пояс: {current_timezone}\n\n"
-            f"Выберите ваш часовой пояс:"
+            f"{t(lang, 'daily_tz_title')}\n\n"
+            f"{t(lang, 'daily_tz_current', tz=current_timezone)}\n\n"
+            f"{t(lang, 'daily_tz_choose')}"
         )
         
         # Создаем клавиатуру с популярными часовыми поясами
-        keyboard = self._create_timezone_keyboard()
+        keyboard = self._create_timezone_keyboard(lang)
         
         await self.bot.edit_message_text(
             chat_id=user_id,
@@ -297,6 +323,7 @@ class DailyAsanaHandlers:
         
         timezone = data[3]
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Обновляем часовой пояс
         success = db_service.update_daily_asana_settings(
@@ -308,45 +335,43 @@ class DailyAsanaHandlers:
             await self.bot.edit_message_text(
                 chat_id=user_id,
                 message_id=callback_query.message.message_id,
-                text=f"✅ Часовой пояс изменен на {timezone}\n\n"
-                       f"Теперь асаны будут приходить с учетом вашего времени.\n\n"
-                       f"Хотите настроить что-то еще?",
-                reply_markup=self._create_settings_menu_keyboard()
+                text=t(lang, 'daily_tz_changed', tz=timezone),
+                reply_markup=self._create_settings_menu_keyboard(lang)
             )
         else:
             await self.bot.answer_callback_query(
                 callback_query.id,
-                text="Ошибка при сохранении часового пояса",
+                text=t(lang, 'daily_err_save_tz'),
                 show_alert=True
             )
     
-    def _create_timezone_keyboard(self):
+    def _create_timezone_keyboard(self, lang: str = 'ru'):
         """Создать клавиатуру выбора часового пояса"""
         keyboard = []
         
         # Популярные часовые пояса России и СНГ
         timezones = [
-            ("🌍 Калининград (UTC+1)", "UTC+1"),
-            ("🌍 Москва (UTC+3)", "UTC+3"),
-            ("🌍 Самара (UTC+4)", "UTC+4"),
-            ("🌍 Екатеринбург (UTC+5)", "UTC+5"),
-            ("🌍 Омск (UTC+6)", "UTC+6"),
-            ("🌍 Красноярск (UTC+7)", "UTC+7"),
-            ("🌍 Иркутск (UTC+8)", "UTC+8"),
-            ("🌍 Якутск (UTC+9)", "UTC+9"),
-            ("🌍 Владивосток (UTC+10)", "UTC+10"),
-            ("🌍 Магадан (UTC+11)", "UTC+11"),
-            ("🌍 Камчатка (UTC+12)", "UTC+12"),
+            ("UTC+1", "daily_tz_city_utc1"),
+            ("UTC+3", "daily_tz_city_utc3"),
+            ("UTC+4", "daily_tz_city_utc4"),
+            ("UTC+5", "daily_tz_city_utc5"),
+            ("UTC+6", "daily_tz_city_utc6"),
+            ("UTC+7", "daily_tz_city_utc7"),
+            ("UTC+8", "daily_tz_city_utc8"),
+            ("UTC+9", "daily_tz_city_utc9"),
+            ("UTC+10", "daily_tz_city_utc10"),
+            ("UTC+11", "daily_tz_city_utc11"),
+            ("UTC+12", "daily_tz_city_utc12"),
         ]
         
-        for text, tz in timezones:
+        for tz, key in timezones:
             keyboard.append([{
-                "text": text,
+                "text": t(lang, key),
                 "callback_data": f"daily_timezone_select_{tz}"
             }])
         
         keyboard.append([{
-            "text": "🔙 Назад",
+            "text": t(lang, 'btn_back'),
             "callback_data": "daily_asana_settings"
         }])
         
@@ -373,12 +398,13 @@ class DailyAsanaHandlers:
         
         # Получаем ID пользователя из callback
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Получаем последнюю асану дня для этого пользователя из БД
         user = db_service.get_user(telegram_id=user_id)
         if not user or not user.last_daily_asana_date:
             logger.error("DEBUG: No user or no last daily asana found")
-            await self.bot.send_message(user_id, "Ошибка: не найдена последняя асана дня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_last'))
             return
         
         # Получаем асану для сегодняшней даты (используем тот же метод, что и в планировщике)
@@ -387,65 +413,55 @@ class DailyAsanaHandlers:
         today = date.today()
         # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
         random.seed(today.toordinal())
-        asana_data = self.scheduler.data_service.get_random_asana()
+        asana_data = self.scheduler.data_service.get_random_asana(lang)
         
         if not asana_data:
             logger.error("DEBUG: No asana data found for today")
-            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_asana'))
             return
         
         asana_name = asana_data.name
         logger.info(f"DEBUG: Using asana name: {asana_name}")
         
         # Показываем меню настройки таймера для асаны
-        await self._show_daily_practice_work_menu(user_id)
+        await self._show_daily_practice_work_menu(user_id, lang=lang)
     
-    async def _show_daily_practice_work_menu(self, user_id: int, message_id: int = None):
+    async def _show_daily_practice_work_menu(self, user_id: int, message_id: int = None, lang: str = 'ru'):
         """Показать меню выбора времени работы практики"""
         import random
         from datetime import date
         today = date.today()
         # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
         random.seed(today.toordinal())
-        asana_data = self.scheduler.data_service.get_random_asana()
+        asana_data = self.scheduler.data_service.get_random_asana(lang)
         
         if not asana_data:
             logger.error("DEBUG: No asana data found for today")
-            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_asana'))
             return
         
         asana_name = asana_data.name
         
         # Показываем меню настройки таймера для асаны
-        practice_text = (
-            f"🕐 **Практика: {asana_name}**\n\n"
-            f"Настройте таймер для вашей практики:\n\n"
-            f"⏱️ **Время выполнения асаны** (в секундах)\n"
-            f"⏸️ **Время отдыха** (в секундах)\n"
-            f"🔄 **Количество циклов** (0 = бесконечно)\n\n"
-            f"Выберите время работы:"
-        )
+        practice_text = t(lang, 'daily_practice_work_menu', title=t(lang, 'daily_practice_title', name=asana_name))
         
         # Создаем клавиатуру с вариантами времени
         keyboard = []
-        work_times = [
-            ("30 сек", 30), ("1 мин", 60), ("2 мин", 120), 
-            ("3 мин", 180), ("5 мин", 300), ("10 мин", 600)
-        ]
+        work_times = [30, 60, 120, 180, 300, 600]
         
-        for text, time in work_times:
+        for work in work_times:
             keyboard.append([{
-                "text": text,
-                "callback_data": f"daily_practice_work_{user_id}_{time}"
+                "text": self._format_work_rest_short(lang, work),
+                "callback_data": f"daily_practice_work_{user_id}_{work}"
             }])
         
         keyboard.append([{
-            "text": "⏰ Указать свое время",
+            "text": t(lang, 'daily_enter_custom'),
             "callback_data": f"daily_practice_custom_{user_id}"
         }])
         
         keyboard.append([{
-            "text": "🔙 Назад",
+            "text": t(lang, 'btn_back'),
             "callback_data": "daily_asana"
         }])
         
@@ -476,7 +492,8 @@ class DailyAsanaHandlers:
         user_id = int(data[4])
         await self._show_daily_practice_work_menu(
             user_id,
-            message_id=callback_query.message.message_id
+            message_id=callback_query.message.message_id,
+            lang=self._lang(callback_query.from_user.id)
         )
     
     async def daily_practice_rest_back_callback(self, callback_query: types.CallbackQuery):
@@ -492,7 +509,8 @@ class DailyAsanaHandlers:
         await self._show_daily_practice_rest_menu(
             user_id,
             work_time,
-            callback_query.message.message_id
+            callback_query.message.message_id,
+            lang=self._lang(callback_query.from_user.id)
         )
     
     async def daily_practice_work_callback(self, callback_query: types.CallbackQuery):
@@ -506,6 +524,7 @@ class DailyAsanaHandlers:
         # Получаем параметры из callback
         user_id = int(data[3])
         work_time = int(data[4])
+        lang = self._lang(callback_query.from_user.id)
         
         # Получаем асану для сегодняшней даты (используем тот же метод, что и в планировщике)
         import random
@@ -513,11 +532,11 @@ class DailyAsanaHandlers:
         today = date.today()
         # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
         random.seed(today.toordinal())
-        asana_data = self.scheduler.data_service.get_random_asana()
+        asana_data = self.scheduler.data_service.get_random_asana(lang)
         
         if not asana_data:
             logger.error("DEBUG: No asana data found for today")
-            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_asana'))
             return
         
         asana_name = asana_data.name
@@ -526,50 +545,46 @@ class DailyAsanaHandlers:
         await self._show_daily_practice_rest_menu(
             user_id,
             work_time,
-            callback_query.message.message_id
+            callback_query.message.message_id,
+            lang=lang
         )
     
-    async def _show_daily_practice_rest_menu(self, user_id: int, work_time: int, message_id: int):
+    async def _show_daily_practice_rest_menu(self, user_id: int, work_time: int, message_id: int, lang: str = 'ru'):
         """Показать меню выбора времени отдыха практики"""
         import random
         from datetime import date
         today = date.today()
         # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
         random.seed(today.toordinal())
-        asana_data = self.scheduler.data_service.get_random_asana()
+        asana_data = self.scheduler.data_service.get_random_asana(lang)
         
         if not asana_data:
             logger.error("DEBUG: No asana data found for today")
-            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_asana'))
             return
         
         asana_name = asana_data.name
         
-        rest_text = (
-            f"🕐 **Практика: {asana_name}**\n\n"
-            f"Время работы: {work_time // 60} мин {work_time % 60} сек\n\n"
-            f"Выберите время отдыха:"
-        )
+        rest_text = t(lang, 'daily_rest_menu',
+                      title=t(lang, 'daily_practice_title', name=asana_name),
+                      work=t(lang, 'daily_dur', m=work_time // 60, s=work_time % 60))
         
         keyboard = []
-        rest_times = [
-            ("10 сек", 10), ("15 сек", 15), ("30 сек", 30), 
-            ("1 мин", 60), ("2 мин", 120)
-        ]
+        rest_times = [10, 15, 30, 60, 120]
         
-        for text, time in rest_times:
+        for rest in rest_times:
             keyboard.append([{
-                "text": text,
-                "callback_data": f"daily_practice_rest_{user_id}_{work_time}_{time}"
+                "text": self._format_work_rest_short(lang, rest),
+                "callback_data": f"daily_practice_rest_{user_id}_{work_time}_{rest}"
             }])
         
         keyboard.append([{
-            "text": "⏰ Указать свое время",
+            "text": t(lang, 'daily_enter_custom'),
             "callback_data": f"daily_practice_custom_rest_{user_id}_{work_time}"
         }])
         
         keyboard.append([{
-            "text": "🔙 Назад",
+            "text": t(lang, 'btn_back'),
             "callback_data": f"daily_practice_work_back_{user_id}"
         }])
         
@@ -593,6 +608,7 @@ class DailyAsanaHandlers:
         user_id = int(data[3])
         work_time = int(data[4])
         rest_time = int(data[5])
+        lang = self._lang(callback_query.from_user.id)
         
         # Получаем асану для сегодняшней даты (используем тот же метод, что и в планировщике)
         import random
@@ -600,37 +616,33 @@ class DailyAsanaHandlers:
         today = date.today()
         # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
         random.seed(today.toordinal())
-        asana_data = self.scheduler.data_service.get_random_asana()
+        asana_data = self.scheduler.data_service.get_random_asana(lang)
         
         if not asana_data:
             logger.error("DEBUG: No asana data found for today")
-            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_asana'))
             return
         
         asana_name = asana_data.name
         
         # Показываем меню выбора количества циклов
-        cycles_text = (
-            f"🕐 **Практика: {asana_name}**\n\n"
-            f"Время работы: {work_time // 60} мин {work_time % 60} сек\n"
-            f"Время отдыха: {rest_time // 60} мин {rest_time % 60} сек\n\n"
-            f"Выберите количество циклов:"
-        )
+        cycles_text = t(lang, 'daily_cycles_menu',
+                        title=t(lang, 'daily_practice_title', name=asana_name),
+                        work=t(lang, 'daily_dur', m=work_time // 60, s=work_time % 60),
+                        rest=t(lang, 'daily_dur', m=rest_time // 60, s=rest_time % 60))
         
         keyboard = []
-        cycles = [
-            ("1 цикл", 1), ("3 цикла", 3), ("5 циклов", 5), 
-            ("7 циклов", 7), ("10 циклов", 10), ("Бесконечно", 0)
-        ]
+        cycle_options = [1, 3, 5, 7, 10, 0]
         
-        for text, count in cycles:
+        for count in cycle_options:
+            label = t(lang, 'daily_infinite') if count == 0 else format_cycles(lang, count)
             keyboard.append([{
-                "text": text,
+                "text": label,
                 "callback_data": f"daily_practice_start_{user_id}_{work_time}_{rest_time}_{count}"
             }])
         
         keyboard.append([{
-            "text": "🔙 Назад",
+            "text": t(lang, 'btn_back'),
             "callback_data": f"daily_practice_rest_back_{user_id}_{work_time}"
         }])
         
@@ -655,6 +667,7 @@ class DailyAsanaHandlers:
         work_time = int(data[4])
         rest_time = int(data[5])
         cycles = int(data[6])
+        lang = self._lang(callback_query.from_user.id)
         
         # Получаем асану для сегодняшней даты (используем тот же метод, что и в планировщике)
         import random
@@ -662,11 +675,11 @@ class DailyAsanaHandlers:
         today = date.today()
         # Используем дату как seed, чтобы получить ту же асану, что и в рассылке
         random.seed(today.toordinal())
-        asana_data = self.scheduler.data_service.get_random_asana()
+        asana_data = self.scheduler.data_service.get_random_asana(lang)
         
         if not asana_data:
             logger.error("DEBUG: No asana data found for today")
-            await self.bot.send_message(user_id, "Ошибка: не найдена асана для сегодня")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_no_asana'))
             return
         
         asana_name = asana_data.name
@@ -675,23 +688,22 @@ class DailyAsanaHandlers:
         db_service.increment_practice_count(user_id)
         
         # Запускаем таймер через существующий обработчик
-        await self._start_asana_timer(user_id, asana_name, work_time, rest_time, cycles, callback_query.message.message_id)
+        await self._start_asana_timer(user_id, asana_name, work_time, rest_time, cycles, callback_query.message.message_id, lang)
     
-    async def _start_asana_timer(self, user_id: int, asana_name: str, work_time: int, rest_time: int, cycles: int, message_id: int):
+    async def _start_asana_timer(self, user_id: int, asana_name: str, work_time: int, rest_time: int, cycles: int, message_id: int, lang: str = 'ru'):
         """Запускает таймер для практики асаны"""
-        cycles_text = "бесконечно" if cycles == 0 else f"{cycles} циклов"
+        cycles_text = self._localized_cycles(lang, cycles)
         start_text = (
-            f"🕐 **Практика: {asana_name}**\n\n"
-            f"⏱️ Работа: {work_time // 60} мин {work_time % 60} сек\n"
-            f"⏸️ Отдых: {rest_time // 60} мин {rest_time % 60} сек\n"
-            f"🔄 Циклы: {cycles_text}\n\n"
-            f"🧘 Начинаем практику! Сосредоточьтесь на дыхании.\n\n"
-            f"Первый цикл начался!"
+            f"{t(lang, 'daily_practice_title', name=asana_name)}\n\n"
+            f"{t(lang, 'work_setting', value=t(lang, 'daily_dur', m=work_time // 60, s=work_time % 60))}\n"
+            f"{t(lang, 'rest_setting', value=t(lang, 'daily_dur', m=rest_time // 60, s=rest_time % 60))}\n"
+            f"{t(lang, 'cycles_setting', value=cycles_text)}\n\n"
+            f"{t(lang, 'daily_start_body')}"
         )
         
         keyboard = [
-            [{"text": "⏹️ Стоп", "callback_data": "timer_stop"}],
-            [{"text": "🔙 Назад", "callback_data": "daily_asana"}]
+            [{"text": t(lang, 'btn_stop'), "callback_data": "timer_stop"}],
+            [{"text": t(lang, 'btn_back'), "callback_data": "daily_asana"}]
         ]
         
         await self.bot.edit_message_text(
@@ -720,18 +732,18 @@ class DailyAsanaHandlers:
         timer_service.start_timer(user_id)
         
         # Отправляем сообщение с UI таймера
-        work_text = f"{session.work_duration}с" if session.work_duration < 60 else f"{session.work_duration//60}м"
-        rest_text = f"{session.rest_duration}с" if session.rest_duration < 60 else f"{session.rest_duration//60}м"
-        cycles_text = "бесконечно" if session.cycles == 0 else str(session.cycles)
+        work_text = format_duration(lang, session.work_duration)
+        rest_text = format_duration(lang, session.rest_duration)
+        cycles_text = str(session.cycles) if session.cycles else t(lang, 'daily_infinite_text')
         
         message = await self.bot.edit_message_text(
             chat_id=user_id,
             message_id=message_id,
-            text=f"🧘‍♂️ **Практика: {asana_name} начата!**\n\n"
-            f"⏱️ Работа: {work_text}\n"
-            f"⏸️ Отдых: {rest_text}\n"
-            f"🔄 Циклы: {cycles_text}\n\n"
-            "Начинаем с первого подхода! 💪",
+            text=t(lang, 'asana_started_body',
+                   title=t(lang, 'daily_timer_started_title', name=asana_name),
+                   work=t(lang, 'work_setting', value=work_text),
+                   rest=t(lang, 'rest_setting', value=rest_text),
+                   cycles=t(lang, 'cycles_setting', value=cycles_text)),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=TimerUI.get_control_keyboard(session)
         )
@@ -747,55 +759,33 @@ class DailyAsanaHandlers:
         upgrade_type = data[2] if len(data) > 2 else 'general'
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Формируем текст в зависимости от типа апгрейда
         if upgrade_type == 'easy':
-            text = (
-                "🌟 **Откройте облегченные варианты асан!**\n\n"
-                "В премиум-версии вы получите:\n"
-                "• 📹 Видео с подготовительными упражнениями\n"
-                "• 🔄 3 уровня сложности каждой асаны\n"
-                "• 🛡️ Безопасные прогрессии\n\n"
-                "💰 **399₽/месяц или 2990₽/год**\n\n"
-                "Хотите начать безопасную практику?"
-            )
+            block_text = t(lang, 'daily_prem_up_easy')
+            cta = t(lang, 'daily_prem_up_cta_easy')
         elif upgrade_type == 'safe':
-            text = (
-                "🛡️ **Практикуйте безопасно!**\n\n"
-                "В премиум-версии:\n"
-                "• ⚠️ Индивидуальные противопоказания\n"
-                "• 🔄 Безопасные альтернативы сложных асан\n"
-                "• 👨‍⚕️ Рекомендации по модификациям\n\n"
-                "💰 **399₽/месяц или 2990₽/год**\n\n"
-                "Ваше здоровье - это инвестиция!"
-            )
+            block_text = t(lang, 'daily_prem_up_safe')
+            cta = t(lang, 'daily_prem_up_cta_safe')
         elif upgrade_type == 'video':
-            text = (
-                "📹 **Детальная видео-отстройка!**\n\n"
-                "В премиум-версии:\n"
-                "• 🎥 Качественные видео для каждой асаны\n"
-                "• 🏗️ Анатомические 3D-схемы\n"
-                "• ❌ Разбор типичных ошибок\n\n"
-                "💰 **399₽/месяц или 2990₽/год**\n\n"
-                "Изучайте асаны профессионально!"
-            )
+            block_text = t(lang, 'daily_prem_up_video')
+            cta = t(lang, 'daily_prem_up_cta_video')
         else:
-            text = (
-                "🌟 **Откройте все возможности йоги!**\n\n"
-                "В премиум-версии:\n"
-                "• 📹 Видео-инструкции для всех асан\n"
-                "• 🎯 Генератор персональных комплексов\n"
-                "• 📊 Статистика и прогресс\n"
-                "• 🧘 Готовые программы под цели\n\n"
-                "💰 **399₽/месяц или 2990₽/год**\n\n"
-                "Начните свой путь в йоге профессионально!"
-            )
+            block_text = t(lang, 'daily_prem_up_general')
+            cta = t(lang, 'daily_prem_up_cta_general')
+        
+        text = (
+            f"{block_text}\n\n"
+            f"{t(lang, 'daily_prem_up_price')}\n\n"
+            f"{cta}"
+        )
         
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Оформить подписку", callback_data="premium_buy_monthly")],
-                [InlineKeyboardButton(text="💰 Годовая подписка (экономия 25%)", callback_data="premium_buy_yearly")],
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu")]
+                [InlineKeyboardButton(text=t(lang, 'prem_btn_monthly'), callback_data="premium_buy_monthly")],
+                [InlineKeyboardButton(text=t(lang, 'prem_btn_yearly'), callback_data="premium_buy_yearly")],
+                [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data="main_menu")]
             ]
         )
         
@@ -807,86 +797,86 @@ class DailyAsanaHandlers:
             reply_markup=keyboard
         )
     
-    def _create_welcome_time_keyboard(self):
+    def _create_welcome_time_keyboard(self, lang: str = 'ru'):
         """Создать клавиатуру выбора времени для первого раза"""
         keyboard = []
         
         # Популярные времена с описаниями
         popular_times = [
-            ("🌅 Раннее утро (6:00)", 6, 0),
-            ("☀️ Утро (7:00)", 7, 0),
-            ("🌤️ Завтрак (8:00)", 8, 0),
-            ("🌞 Начало дня (9:00)", 9, 0),
-            ("🌅 Перед работой (10:00)", 10, 0),
-            ("🌤️ Обед (13:00)", 13, 0),
-            ("🌆 После работы (18:00)", 18, 0),
-            ("🌙 Вечер (20:00)", 20, 0),
-            ("🌛 Перед сном (21:00)", 21, 0),
+            ("_0600", 6, 0),
+            ("_0700", 7, 0),
+            ("_0800", 8, 0),
+            ("_0900", 9, 0),
+            ("_1000", 10, 0),
+            ("_1300", 13, 0),
+            ("_1800", 18, 0),
+            ("_2000", 20, 0),
+            ("_2100", 21, 0),
         ]
         
-        for text, hour, minute in popular_times:
+        for key, hour, minute in popular_times:
             keyboard.append([{
-                "text": text,
+                "text": t(lang, f"daily_w_time{key}"),
                 "callback_data": f"daily_welcome_time_{hour}_{minute}"
             }])
         
         keyboard.append([{
-            "text": "⏰ Ввести время вручную",
+            "text": t(lang, 'daily_enter_manual'),
             "callback_data": "daily_time_manual_welcome"
         }])
         
         keyboard.append([{
-            "text": "⏰ Настроить другое время",
+            "text": t(lang, 'daily_set_other_time'),
             "callback_data": "daily_asana_settings"
         }])
         
         keyboard.append([{
-            "text": "🔙 В главное меню",
+            "text": t(lang, 'btn_back_main'),
             "callback_data": "main_menu"
         }])
         
         return {"inline_keyboard": keyboard}
     
-    def _create_time_selection_keyboard(self):
+    def _create_time_selection_keyboard(self, lang: str = 'ru'):
         """Создать клавиатуру выбора времени"""
         keyboard = []
         
         # Популярные времена
         popular_times = [
-            ("🌅 Утро (7:00)", 7, 0),
-            ("☀️ Раннее утро (8:00)", 8, 0),
-            ("🌤️ Начало дня (9:00)", 9, 0),
-            ("🌞 Перед работой (10:00)", 10, 0),
-            ("🌅 Обед (12:00)", 12, 0),
-            ("🌤️ После работы (18:00)", 18, 0),
-            ("🌆 Вечер (20:00)", 20, 0),
-            ("🌙 Перед сном (21:00)", 21, 0),
+            ("_0700", 7, 0),
+            ("_0800", 8, 0),
+            ("_0900", 9, 0),
+            ("_1000", 10, 0),
+            ("_1200", 12, 0),
+            ("_1800", 18, 0),
+            ("_2000", 20, 0),
+            ("_2100", 21, 0),
         ]
         
-        for text, hour, minute in popular_times:
+        for key, hour, minute in popular_times:
             keyboard.append([{
-                "text": text,
+                "text": t(lang, f"daily_s_time{key}"),
                 "callback_data": f"daily_time_set_{hour}_{minute}"
             }])
         
         keyboard.append([{
-            "text": "⏰ Ввести время вручную",
+            "text": t(lang, 'daily_enter_manual'),
             "callback_data": "daily_time_manual"
         }])
         
         # Добавляем кнопки управления
         keyboard.append([{
-            "text": "🌍 Часовой пояс",
+            "text": t(lang, 'daily_tz_button'),
             "callback_data": "daily_timezone_settings"
         }])
         
         keyboard.append([{
-            "text": "🔕 Отключить уведомления",
+            "text": t(lang, 'daily_disable_btn'),
             "callback_data": "daily_asana_disable"
         }])
         
         keyboard.append([{
-            "text": "🔙 В главное меню",
+            "text": t(lang, 'btn_back_main'),
             "callback_data": "main_menu"
         }])
         
@@ -897,17 +887,13 @@ class DailyAsanaHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
-        manual_text = (
-            "⏰ **Введите время вручную**\n\n"
-            "Пожалуйста, введите время в формате ЧЧ:ММ\n"
-            "Например: 14:30 или 09:15\n\n"
-            "⚠️ Время должно быть в 24-часовом формате"
-        )
+        manual_text = t(lang, 'daily_manual_title')
         
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="daily_asana_settings")]
+                [InlineKeyboardButton(text=t(lang, 'btn_back'), callback_data="daily_asana_settings")]
             ]
         )
         
@@ -928,17 +914,13 @@ class DailyAsanaHandlers:
         await self.bot.answer_callback_query(callback_query.id)
         
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
-        manual_text = (
-            "⏰ **Введите время вручную**\n\n"
-            "Пожалуйста, введите время в формате ЧЧ:ММ\n"
-            "Например: 14:30 или 09:15\n\n"
-            "⚠️ Время должно быть в 24-часовом формате"
-        )
+        manual_text = t(lang, 'daily_manual_title')
         
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="daily_asana_settings")]
+                [InlineKeyboardButton(text=t(lang, 'btn_back'), callback_data="daily_asana_settings")]
             ]
         )
         
@@ -956,6 +938,7 @@ class DailyAsanaHandlers:
     async def handle_time_input(self, message: types.Message):
         """Обработчик текстового ввода времени"""
         user_id = message.from_user.id
+        lang = self._lang(user_id)
         
         # Проверяем, ожидаем ли мы ввод времени от этого пользователя
         if not hasattr(self, 'waiting_for_time_input') or self.waiting_for_time_input != user_id:
@@ -989,31 +972,26 @@ class DailyAsanaHandlers:
             
             if success:
                 confirmation_text = (
-                    f"✅ **Отлично! Настройки сохранены**\n\n"
-                    f"⏰ Время: {new_time.strftime('%H:%M')}\n"
-                    f"📅 Ежедневные уведомления: включены\n\n"
-                    f"🎯 Асана дня будет приходить каждый день в {new_time.strftime('%H:%M')}\n\n"
-                    f"Хотите получить асану дня прямо сейчас?"
+                    f"{t(lang, 'daily_saved_ok')}\n\n"
+                    f"{t(lang, 'daily_saved_time', time=new_time.strftime('%H:%M'))}\n"
+                    f"{t(lang, 'daily_notif_on')}\n\n"
+                    f"{t(lang, 'daily_saved_confirm_schedule', time=new_time.strftime('%H:%M'))}\n\n"
+                    f"{t(lang, 'daily_ask_now')}"
                 )
                 
                 await message.answer(
                     confirmation_text,
                     parse_mode=ParseMode.MARKDOWN,
                     reply_markup={"inline_keyboard": [[
-                        {"text": "🕐 Получить асану дня", "callback_data": "daily_asana_now"},
-                        {"text": "🔙 В главное меню", "callback_data": "main_menu"}
+                        {"text": t(lang, 'daily_get_now_btn'), "callback_data": "daily_asana_now"},
+                        {"text": t(lang, 'btn_back_main'), "callback_data": "main_menu"}
                     ]]}
                 )
             else:
-                await message.answer("❌ Ошибка при сохранении времени")
+                await message.answer(t(lang, 'daily_err_save_time'))
                 
         except ValueError as e:
-            await message.answer(
-                f"❌ Неверный формат времени!\n\n"
-                f"Пожалуйста, введите время в формате ЧЧ:ММ\n"
-                f"Например: 14:30 или 09:15\n"
-                f"Часы: 0-23, Минуты: 0-59"
-            )
+            await message.answer(t(lang, 'daily_time_invalid'))
         finally:
             # Сбрасываем флаг ожидания ввода
             if hasattr(self, 'waiting_for_time_input'):
@@ -1023,25 +1001,26 @@ class DailyAsanaHandlers:
         """Обработчик получения асаны дня прямо сейчас"""
         await self.bot.answer_callback_query(callback_query.id)
         user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
         
         # Получаем пользователя и отправляем асану дня
         user = db_service.get_user(telegram_id=user_id)
         if user:
             await self.scheduler.send_daily_asana_to_user(user)
         else:
-            await self.bot.send_message(user_id, "❌ Ошибка: пользователь не найден")
+            await self.bot.send_message(user_id, t(lang, 'daily_err_user_not_found'))
         
         # Сбрасываем состояние ожидания
         if hasattr(self, 'waiting_for_time_input'):
             delattr(self, 'waiting_for_time_input')
     
-    def _create_settings_menu_keyboard(self):
+    def _create_settings_menu_keyboard(self, lang: str = 'ru'):
         """Создать клавиатуру меню настроек"""
         return InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="⏰ Изменить время", callback_data="daily_asana_settings")],
-                [InlineKeyboardButton(text="🌍 Изменить часовой пояс", callback_data="daily_timezone_settings")],
-                [InlineKeyboardButton(text="🔕 Отключить уведомления", callback_data="daily_asana_disable")],
-                [InlineKeyboardButton(text="🔙 В главное меню", callback_data="main_menu")]
+                [InlineKeyboardButton(text=t(lang, 'daily_change_time_btn'), callback_data="daily_asana_settings")],
+                [InlineKeyboardButton(text=t(lang, 'daily_change_tz_btn'), callback_data="daily_timezone_settings")],
+                [InlineKeyboardButton(text=t(lang, 'daily_disable_btn'), callback_data="daily_asana_disable")],
+                [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data="main_menu")]
             ]
         )

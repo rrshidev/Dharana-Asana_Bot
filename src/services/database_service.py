@@ -6,6 +6,7 @@ from datetime import datetime, date, time, timedelta, timezone
 from typing import Optional, List
 
 from src.config import DATABASE_URL
+from src.i18n import normalize_lang
 from src.models.user import User
 from src.models.subscription_models import UserSubscription
 from src.models.video_models import AsanaVideo
@@ -26,6 +27,7 @@ class DatabaseService:
     def __init__(self):
         self.engine = create_engine(DATABASE_URL)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=self.engine)
+        self._lang_cache = {}  # telegram_id -> 'ru'|'en' (кэш запросов языка)
 
         # Локальная разработка (SQLite): создаём недостающие таблицы.
         # В проде (PostgreSQL) таблицы уже созданы API — no-op.
@@ -50,8 +52,10 @@ class DatabaseService:
             session.close()
     
     def get_or_create_user(self, telegram_id: int, username: str = None, 
-                          first_name: str = None, last_name: str = None) -> User:
+                          first_name: str = None, last_name: str = None,
+                          language: str = None) -> User:
         """Получить или создать пользователя"""
+        lang = normalize_lang(language)
         session = self.get_session()
         try:
             user = session.query(User).filter(User.telegram_id == telegram_id).first()
@@ -61,11 +65,12 @@ class DatabaseService:
                     telegram_id=telegram_id,
                     username=username,
                     name=first_name,
-                    last_name=last_name
+                    last_name=last_name,
+                    language=lang
                 )
                 session.add(user)
                 session.commit()
-                logger.info(f"Created new user: {telegram_id}")
+                logger.info(f"Created new user: {telegram_id}, language={lang}")
             else:
                 # Обновляем данные если изменились
                 if username and user.username != username:
@@ -74,14 +79,49 @@ class DatabaseService:
                     user.name = first_name
                 if last_name and user.last_name != last_name:
                     user.last_name = last_name
+                # Язык задаём ТОЛЬКО при первом контакте (не перезаписываем ручной выбор)
+                if not user.language:
+                    user.language = lang
                 session.commit()
             
+            self._lang_cache[telegram_id] = user.language or 'ru'
             return user
             
         except IntegrityError as e:
             session.rollback()
             logger.error(f"Database error creating user {telegram_id}: {e}")
             raise
+        finally:
+            session.close()
+    
+    def get_user_language(self, telegram_id: int) -> str:
+        """Получить язык пользователя ('ru'|'en'). Кэшируется."""
+        cached = self._lang_cache.get(telegram_id)
+        if cached:
+            return cached
+        user = self.get_user(telegram_id)
+        lang = normalize_lang(user.language if user else None)
+        self._lang_cache[telegram_id] = lang
+        return lang
+    
+    def set_user_language(self, telegram_id: int, language: str) -> bool:
+        """Задать язык пользователя. Кэш обновляется сразу."""
+        lang = normalize_lang(language)
+        session = self.get_session()
+        try:
+            user = session.query(User).filter(User.telegram_id == telegram_id).first()
+            if not user:
+                return False
+            user.language = lang
+            user.updated_at = datetime.utcnow()
+            session.commit()
+            self._lang_cache[telegram_id] = lang
+            logger.info(f"Language for user {telegram_id} set to {lang}")
+            return True
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error setting language for {telegram_id}: {e}")
+            return False
         finally:
             session.close()
     

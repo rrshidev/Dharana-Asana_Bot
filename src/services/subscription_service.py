@@ -4,7 +4,8 @@ from typing import Optional, List, Dict, Tuple
 
 from src.models.subscription_models import UserSubscription, SubscriptionType, SubscriptionPlan
 from src.models.user import User
-from src.services.database_service import DatabaseService
+from src.services.database_service import DatabaseService, db_service
+from src.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,11 @@ class SubscriptionService:
 
     def __init__(self, database_service: DatabaseService):
         self.db = database_service
+
+    @staticmethod
+    def _lang(telegram_id: int) -> str:
+        """Язык пользователя ('ru'|'en')."""
+        return db_service.get_user_language(telegram_id)
 
     def get_user_subscription(self, telegram_id: int) -> UserSubscription:
         """Получает или создает подписку пользователя (по user_id из app_users)."""
@@ -98,21 +104,23 @@ class SubscriptionService:
 
     async def can_generate_sequence(self, telegram_id: int) -> Tuple[bool, str]:
         """Проверяет может ли пользователь генерировать последовательность"""
+        lang = self._lang(telegram_id)
         subscription = self.get_user_subscription(telegram_id)
 
         if subscription.is_subscription_active():
-            return True, "✅ Премиум-доступ: безлимитные генерации"
+            return True, t(lang, 'sub_gen_premium')
 
         if subscription.is_trial_active():
-            return True, "🎯 Пробный период: безлимитные генерации"
+            return True, t(lang, 'sub_gen_trial')
 
         if subscription.can_generate_sequence():
-            return True, "🆓 Бесплатная генерация: 1 в день"
+            return True, t(lang, 'sub_gen_free')
 
-        return False, "❌ Лимит исчерпан. Для безлимитных генераций нужна подписка"
+        return False, t(lang, 'sub_gen_limit')
 
     async def use_generation(self, telegram_id: int) -> Tuple[bool, str]:
         """Использует генерацию последовательности"""
+        lang = self._lang(telegram_id)
         can_generate, message = await self.can_generate_sequence(telegram_id)
 
         if not can_generate:
@@ -122,17 +130,18 @@ class SubscriptionService:
 
         # Премиум/триал — лимиты не считаем
         if subscription.is_subscription_active() or subscription.is_trial_active():
-            return True, "✅ Генерация успешна"
+            return True, t(lang, 'sub_gen_success')
 
         # Для бесплатных пользователей считаем лимиты
         if subscription.increment_daily_generations():
             self.update_subscription(subscription)
-            return True, "✅ Генерация успешна"
+            return True, t(lang, 'sub_gen_success')
 
-        return False, "❌ Лимит генераций на сегодня исчерпан"
+        return False, t(lang, 'sub_gen_limit_day')
 
     async def get_subscription_info(self, telegram_id: int) -> dict:
         """Получает информацию о подписке пользователя"""
+        lang = self._lang(telegram_id)
         subscription = self.get_user_subscription(telegram_id)
 
         is_active = subscription.has_premium_access()
@@ -141,13 +150,13 @@ class SubscriptionService:
 
         if is_active:
             if subscription.subscription_type == SubscriptionType.TRIAL.value:
-                status = "🎯 Пробный период"
+                status = t(lang, 'sub_status_trial')
                 days_left = (subscription.trial_end - datetime.utcnow()).days if subscription.trial_end else 0
             else:
-                status = "⭐ Премиум"
+                status = t(lang, 'sub_status_premium')
                 days_left = (subscription.subscription_end - datetime.utcnow()).days if subscription.subscription_end else 0
         else:
-            status = "🆓 Бесплатная версия"
+            status = t(lang, 'sub_status_free')
 
         can_generate, gen_message = await self.can_generate_sequence(telegram_id)
 
