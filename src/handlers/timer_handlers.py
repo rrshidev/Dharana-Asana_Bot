@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import re
+from datetime import datetime
 from aiogram import types, F
 from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -757,16 +758,23 @@ class TimerHandlers:
                                 # (контракт как у timersana: POST /api/v1/practice/timer).
                                 # Сбой записи не должен ломать завершение практики.
                                 try:
-                                    practice_seconds = max(
-                                        updated_session.total_elapsed,
-                                        updated_session.elapsed,
-                                    )
+                                    if updated_session.timer_type == TimerType.MEDITATION:
+                                        practice_seconds = max(
+                                            updated_session.total_elapsed,
+                                            updated_session.elapsed,
+                                        )
+                                    else:
+                                        # Для асан/пранаямы elapsed сбрасывается на каждой
+                                        # фазе, а total_elapsed растёт только при паузе — итог
+                                        # равен суммарному времени работы: циклы × work.
+                                        practice_seconds = updated_session.cycles * updated_session.work_duration
                                     await self.user_service.record_practice(
                                         telegram_id=user_id,
                                         practice_type=updated_session.timer_type.value,
                                         total_duration_seconds=practice_seconds,
+                                        cycles=updated_session.cycles,
                                         started_at=updated_session.start_time,
-                                        completed_at=updated_session.completed_at,
+                                        completed_at=datetime.now(),
                                     )
                                 except Exception as e:
                                     logger.error(f"Ошибка записи практики для {user_id}: {e}")
