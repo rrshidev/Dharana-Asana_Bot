@@ -50,7 +50,7 @@ class YogaBot:
         self.ready_sequence_handlers = ReadySequenceHandlers(self.bot, subscription_service)
         
         # Инициализация асаны дня
-        self.daily_asana_handlers = DailyAsanaHandlers(self.bot, data_service)
+        self.daily_asana_handlers = DailyAsanaHandlers(self.bot, data_service, subscription_service)
         
         # Инициализация генератора последовательностей
         from src.handlers.sequence_handlers import SequenceHandlers

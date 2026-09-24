@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import time
 from aiogram import types
 from aiogram.enums import ParseMode
@@ -7,6 +8,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from src.i18n import t, format_duration, format_cycles
 from src.services.database_service import db_service
 from src.services.data_service import DataService
+from src.services.video_service import VideoService
 from src.services.daily_asana_scheduler import DailyAsanaScheduler
 from src.utils.keyboard_service import KeyboardService
 
@@ -15,17 +17,85 @@ logger = logging.getLogger(__name__)
 class DailyAsanaHandlers:
     """Обработчики для асаны дня"""
     
-    def __init__(self, bot, data_service: DataService):
+    def __init__(self, bot, data_service: DataService, subscription_service=None):
         self.bot = bot
         self.data_service = data_service
+        self.subscription_service = subscription_service
+        self.video_service = VideoService(db_service)
         self.keyboard_service = KeyboardService()
         self.scheduler = DailyAsanaScheduler(bot, data_service)
     
+    async def _replace_message(
+        self,
+        message: types.Message,
+        text: str,
+        reply_markup=None,
+        parse_mode=None,
+    ):
+        """Отредактировать сообщение, поддерживая фото-caption и обычный текст.
+
+        Сообщение «Асаны дня» отправляется как фото с caption, поэтому
+        edit_message_text на нём падает — для медиа нужен edit_message_caption.
+        """
+        is_media = bool(getattr(message, "photo", None)) or bool(getattr(message, "video", None))
+        if is_media:
+            await self.bot.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                caption=text,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
+            )
+        else:
+            await self.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                text=text,
+                parse_mode=parse_mode,
+                reply_markup=reply_markup,
+            )
+
     @staticmethod
     def _lang(user_id: int) -> str:
         """Язык пользователя ('ru'|'en')."""
         return db_service.get_user_language(user_id)
     
+    async def _send_daily_asana_video(self, message, user_id: int, lang: str, subscription_info):
+        """Отправить видео «Асаны дня» премиум-юзеру.
+
+        Видео ищется по последней отправленной юзеру «Асане дня».
+        Если видео нет — показываем статус подписки с пояснением.
+        """
+        asana_name = db_service.get_last_daily_asana(user_id)
+        if asana_name:
+            video = self.video_service.get_video_for_asana(asana_name, is_premium_user=True)
+            if video and video['video_path'] and os.path.exists(video['video_path']):
+                from aiogram.types import FSInputFile
+                try:
+                    await self.bot.send_video(user_id, FSInputFile(video['video_path']))
+                    return
+                except Exception as e:
+                    logger.error(f"Error sending daily asana video: {e}")
+
+        # Видео нет (или не отправилось) — пояснение + статус подписки
+        if subscription_info['is_trial']:
+            status_text = t(lang, 'sub_status_trial_full').format(
+                days_left=subscription_info['days_left'])
+        else:
+            status_text = t(lang, 'sub_status_premium_full').format(
+                days_left=subscription_info['days_left'])
+
+        text = (
+            f"{t(lang, 'daily_video_no_video', name=asana_name or '')}\n\n"
+            f"{status_text}"
+        )
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data="main_menu")]
+            ]
+        )
+        await self._replace_message(message, text, keyboard, ParseMode.MARKDOWN)
+
     @staticmethod
     def _format_work_rest_short(lang: str, seconds: int) -> str:
         """'30 сек'/'1 мин' (RU) или '30 s'/'1 min' (EN)."""
@@ -67,7 +137,7 @@ class DailyAsanaHandlers:
         fresh_user = db_service.get_user(telegram_id=user_id)
         if fresh_user and fresh_user.last_daily_asana_date is None:
             # Первый раз - показываем приветствие и настройку
-            await self._show_first_time_setup(user_id, message.message_id)
+            await self._show_first_time_setup(user_id, message)
         else:
             # Не первый раз - показываем настройки асаны дня
             settings_text = (
@@ -104,12 +174,12 @@ class DailyAsanaHandlers:
         fresh_user = db_service.get_user(telegram_id=user_id)
         if fresh_user and fresh_user.last_daily_asana_date is None:
             # Первый раз - показываем приветствие и настройку
-            await self._show_first_time_setup(user_id, callback_query.message.message_id)
+            await self._show_first_time_setup(user_id, callback_query.message)
         else:
             # Не первый раз - показываем настройки через существующий callback
             await self.daily_asana_settings_callback(callback_query)
     
-    async def _show_first_time_setup(self, user_id: int, message_id: int = None):
+    async def _show_first_time_setup(self, user_id: int, message=None):
         """Показать приветствие и настройку для первого раза"""
         lang = self._lang(user_id)
         
@@ -125,15 +195,9 @@ class DailyAsanaHandlers:
         
         keyboard = self._create_welcome_time_keyboard(lang)
         
-        if message_id:
-            # Редактируем существующее сообщение
-            await self.bot.edit_message_text(
-                chat_id=user_id,
-                message_id=message_id,
-                text=welcome_text,
-                parse_mode=ParseMode.MARKDOWN,
-                reply_markup=keyboard
-            )
+        if message:
+            # Редактируем существующее сообщение (текст или фото-caption)
+            await self._replace_message(message, welcome_text, keyboard, ParseMode.MARKDOWN)
         else:
             # Отправляем новое сообщение
             await self.bot.send_message(
@@ -169,13 +233,7 @@ class DailyAsanaHandlers:
         # Создаем клавиатуру с выбором времени
         keyboard = self._create_time_selection_keyboard(lang)
         
-        await self.bot.edit_message_text(
-            chat_id=user_id,
-            message_id=callback_query.message.message_id,
-            text=settings_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=keyboard
-        )
+        await self._replace_message(callback_query.message, settings_text, keyboard, ParseMode.MARKDOWN)
     
     async def daily_asana_time_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора времени"""
@@ -199,11 +257,10 @@ class DailyAsanaHandlers:
         )
         
         if success:
-            await self.bot.edit_message_text(
-                chat_id=user_id,
-                message_id=callback_query.message.message_id,
-                text=t(lang, 'daily_time_changed', time=new_time.strftime('%H:%M')),
-                reply_markup=self._create_settings_menu_keyboard(lang)
+            await self._replace_message(
+                callback_query.message,
+                t(lang, 'daily_time_changed', time=new_time.strftime('%H:%M')),
+                self._create_settings_menu_keyboard(lang),
             )
         else:
             await self.bot.answer_callback_query(
@@ -243,11 +300,11 @@ class DailyAsanaHandlers:
                 f"{t(lang, 'daily_first_asana')}"
             )
             
-            await self.bot.edit_message_text(
-                chat_id=user_id,
-                message_id=callback_query.message.message_id,
-                text=confirmation_text,
-                parse_mode=ParseMode.MARKDOWN
+            await self._replace_message(
+                callback_query.message,
+                confirmation_text,
+                None,
+                ParseMode.MARKDOWN,
             )
             
             # Отправляем первую асану дня
@@ -275,11 +332,10 @@ class DailyAsanaHandlers:
         )
         
         if success:
-            await self.bot.edit_message_text(
-                chat_id=user_id,
-                message_id=callback_query.message.message_id,
-                text=t(lang, 'daily_disabled'),
-                reply_markup=self.keyboard_service.create_main_menu(lang)
+            await self._replace_message(
+                callback_query.message,
+                t(lang, 'daily_disabled'),
+                self.keyboard_service.create_main_menu(lang),
             )
     
     async def daily_timezone_settings_callback(self, callback_query: types.CallbackQuery):
@@ -305,13 +361,7 @@ class DailyAsanaHandlers:
         # Создаем клавиатуру с популярными часовыми поясами
         keyboard = self._create_timezone_keyboard(lang)
         
-        await self.bot.edit_message_text(
-            chat_id=user_id,
-            message_id=callback_query.message.message_id,
-            text=timezone_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=keyboard
-        )
+        await self._replace_message(callback_query.message, timezone_text, keyboard, ParseMode.MARKDOWN)
     
     async def daily_timezone_select_callback(self, callback_query: types.CallbackQuery):
         """Обработчик выбора часового пояса"""
@@ -332,11 +382,10 @@ class DailyAsanaHandlers:
         )
         
         if success:
-            await self.bot.edit_message_text(
-                chat_id=user_id,
-                message_id=callback_query.message.message_id,
-                text=t(lang, 'daily_tz_changed', tz=timezone),
-                reply_markup=self._create_settings_menu_keyboard(lang)
+            await self._replace_message(
+                callback_query.message,
+                t(lang, 'daily_tz_changed', tz=timezone),
+                self._create_settings_menu_keyboard(lang),
             )
         else:
             await self.bot.answer_callback_query(
@@ -760,6 +809,30 @@ class DailyAsanaHandlers:
         
         user_id = callback_query.from_user.id
         lang = self._lang(user_id)
+
+        # У пользователя уже есть премиум/триал
+        if self.subscription_service:
+            subscription_info = await self.subscription_service.get_subscription_info(user_id)
+            if subscription_info['is_active']:
+                # Если просят ВИДЕО — пробуем прислать видео «Асаны дня» премиум-юзеру.
+                if upgrade_type == 'video':
+                    await self._send_daily_asana_video(callback_query.message, user_id, lang, subscription_info)
+                    return
+
+                # Остальные типы (easy/safe/general): показываем статус, а не оффер покупки
+                if subscription_info['is_trial']:
+                    text = t(lang, 'sub_status_trial_full').format(
+                        days_left=subscription_info['days_left'])
+                else:
+                    text = t(lang, 'sub_status_premium_full').format(
+                        days_left=subscription_info['days_left'])
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data="main_menu")]
+                    ]
+                )
+                await self._replace_message(callback_query.message, text, keyboard, ParseMode.MARKDOWN)
+                return
         
         # Формируем текст в зависимости от типа апгрейда
         if upgrade_type == 'easy':
@@ -789,13 +862,7 @@ class DailyAsanaHandlers:
             ]
         )
         
-        await self.bot.edit_message_text(
-            chat_id=user_id,
-            message_id=callback_query.message.message_id,
-            text=text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=keyboard
-        )
+        await self._replace_message(callback_query.message, text, keyboard, ParseMode.MARKDOWN)
     
     def _create_welcome_time_keyboard(self, lang: str = 'ru'):
         """Создать клавиатуру выбора времени для первого раза"""
@@ -897,13 +964,7 @@ class DailyAsanaHandlers:
             ]
         )
         
-        await self.bot.edit_message_text(
-            chat_id=user_id,
-            message_id=callback_query.message.message_id,
-            text=manual_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=keyboard
-        )
+        await self._replace_message(callback_query.message, manual_text, keyboard, ParseMode.MARKDOWN)
         
         # Устанавливаем состояние ожидания ввода времени
         # Здесь можно использовать FSM, но для простоты используем временное хранилище
@@ -924,13 +985,7 @@ class DailyAsanaHandlers:
             ]
         )
         
-        await self.bot.edit_message_text(
-            chat_id=user_id,
-            message_id=callback_query.message.message_id,
-            text=manual_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=keyboard
-        )
+        await self._replace_message(callback_query.message, manual_text, keyboard, ParseMode.MARKDOWN)
         
         # Устанавливаем состояние ожидания ввода времени
         self.waiting_for_time_input = user_id

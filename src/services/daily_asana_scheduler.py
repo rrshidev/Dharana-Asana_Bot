@@ -96,6 +96,9 @@ class DailyAsanaScheduler:
             
             await self._send_asana_message(fresh_user.telegram_id, asana_text, image_path, keyboard)
             
+            # Запоминаем, какую асану отправили — для видео-отстройки по кнопке
+            db_service.save_last_daily_asana(fresh_user.telegram_id, base_name)
+            
             # Обновляем дату последней отправки
             db_service.update_last_daily_asana_date(fresh_user.telegram_id)
             

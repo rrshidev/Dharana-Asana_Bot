@@ -4,6 +4,16 @@ from datetime import date, datetime, time
 
 Base = declarative_base()
 
+class DailyAsanaLog(Base):
+    """Последняя отправленная «Асана дня» пользователю (для видео-отстройки)."""
+    __tablename__ = 'daily_asana_logs'
+
+    id = Column(Integer, primary_key=True)
+    telegram_id = Column(Integer, unique=True, nullable=False, index=True)
+    asana_name = Column(String(500), nullable=False)  # Каноническое имя (base_name)
+    sent_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class User(Base):
     """Пользователь в ЕДИНОЙ таблице app_users (общая с API PostgreSQL)."""
     __tablename__ = 'app_users'

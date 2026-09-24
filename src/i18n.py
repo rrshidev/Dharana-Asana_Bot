@@ -630,6 +630,11 @@ TRANSLATIONS = {
         'daily_good_practice': 'Хорошей практики! 🙏',
         'daily_start_practice_btn': '🕐 Начать практику (5 мин)',
         'daily_video_premium_btn': '📹 Видео-отстройка (премиум)',
+        'daily_video_no_video': (
+            "🗂 **Видео-отстройка для «{name}» пока отсутствует**\n\n"
+            "Мы постоянно добавляем новые видео — загляните позже. "
+            "А пока вот состояние вашей подписки:"
+        ),
 
         # --- Генератор последовательностей (sequence) ---
         'seq_menu_title': "🏋️‍♂️ **Генератор практики 'Зал'**\n\nСоздайте персональную последовательность асан под ваши цели!\n\nВыберите параметры для генерации:",
@@ -1401,6 +1406,11 @@ TRANSLATIONS = {
         'daily_good_practice': 'Have a great practice! 🙏',
         'daily_start_practice_btn': '🕐 Start practice (5 min)',
         'daily_video_premium_btn': '📹 Video alignment (premium)',
+        'daily_video_no_video': (
+            "🗂 **Video alignment for \"{name}\" is not available yet**\n\n"
+            "We constantly add new videos — check back soon. "
+            "Meanwhile, here is your subscription status:"
+        ),
 
         # --- Sequence generator ---
         'seq_menu_title': "🏋️‍♂️ **Practice generator 'Hall'**\n\nCreate a personal sequence of asanas for your goals!\n\nChoose the parameters for generation:",

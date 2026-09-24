@@ -7,7 +7,7 @@ from typing import Optional, List
 
 from src.config import DATABASE_URL
 from src.i18n import normalize_lang
-from src.models.user import User
+from src.models.user import User, DailyAsanaLog
 from src.models.subscription_models import UserSubscription
 from src.models.video_models import AsanaVideo
 from src.models.ready_sequence_models import ReadySequence
@@ -34,7 +34,8 @@ class DatabaseService:
         for base in (User.__table__.metadata,
                      UserSubscription.__table__.metadata,
                      AsanaVideo.__table__.metadata,
-                     ReadySequence.__table__.metadata):
+                     ReadySequence.__table__.metadata,
+                     DailyAsanaLog.__table__.metadata):
             base.create_all(bind=self.engine)
         logger.info("Database tables created/verified")
     
@@ -321,6 +322,38 @@ class DatabaseService:
             session.rollback()
             logger.error(f"Error incrementing practice count: {e}")
             return False
+        finally:
+            session.close()
+    
+    def save_last_daily_asana(self, telegram_id: int, asana_name: str) -> bool:
+        """Сохранить имя последней отправленной «Асаны дня» (для видео-отстройки)."""
+        session = self.get_session()
+        try:
+            log = session.query(DailyAsanaLog).filter(DailyAsanaLog.telegram_id == telegram_id).first()
+            if not log:
+                log = DailyAsanaLog(telegram_id=telegram_id, asana_name=asana_name)
+                session.add(log)
+            else:
+                log.asana_name = asana_name
+                log.sent_at = datetime.utcnow()
+            session.commit()
+            return True
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error saving last daily asana for user {telegram_id}: {e}")
+            return False
+        finally:
+            session.close()
+    
+    def get_last_daily_asana(self, telegram_id: int) -> Optional[str]:
+        """Имя последней отправленной «Асаны дня» или None."""
+        session = self.get_session()
+        try:
+            log = session.query(DailyAsanaLog).filter(DailyAsanaLog.telegram_id == telegram_id).first()
+            return log.asana_name if log else None
+        except Exception as e:
+            logger.error(f"Error reading last daily asana for user {telegram_id}: {e}")
+            return None
         finally:
             session.close()
 
