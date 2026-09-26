@@ -73,23 +73,16 @@ class MessageHandlers:
 
             # Отправляем видео или фото
             if video and video['is_premium'] and is_premium:
-                # Премиум-пользователь получает видео
+                # Премиум-пользователь получает фото и видео (фото — сразу, видео долго грузится)
+                from aiogram.types.input_file import FSInputFile
+                if asana_data.image_path:
+                    await self.bot.send_photo(message.from_user.id, FSInputFile(asana_data.image_path))
                 if video['video_path'] and os.path.exists(video['video_path']):
                     try:
-                        from aiogram.types.input_file import FSInputFile
                         await self.bot.send_video(message.from_user.id, FSInputFile(video['video_path']))
                         logger.info(f"Sent video for asana {asana_data.name} to premium user {message.from_user.id}")
                     except Exception as e:
                         logger.error(f"Error sending video: {e}")
-                        # Если видео не отправилось, отправляем фото
-                        if asana_data.image_path:
-                            from aiogram.types.input_file import FSInputFile
-                            await self.bot.send_photo(message.from_user.id, FSInputFile(asana_data.image_path))
-                else:
-                    # Видео файла нет, отправляем фото
-                    if asana_data.image_path:
-                        from aiogram.types.input_file import FSInputFile
-                        await self.bot.send_photo(message.from_user.id, FSInputFile(asana_data.image_path))
 
             elif video and video['is_premium'] and not is_premium:
                 # Бесплатный пользователь видит превью видео и предложение подписки
