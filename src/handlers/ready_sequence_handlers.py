@@ -7,6 +7,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from src.services.subscription_service import SubscriptionService
 from src.services.ready_sequence_file_service import ReadySequenceFileService
 from src.utils.keyboard_service import KeyboardService
+from src.utils.text_utils import send_markdown_safe
 from src.i18n import t
 from src.services.database_service import db_service
 
@@ -94,7 +95,7 @@ class ReadySequenceHandlers:
             full_text = t(lang, 'rs_seq_title', name=sequence['name'])
             full_text += status_text
             
-            await self.bot.send_message(user_id, full_text, parse_mode=ParseMode.MARKDOWN)
+            await send_markdown_safe(self.bot, user_id, full_text)
             
             # Обрабатываем видео
             if sequence['video_path'] and os.path.exists(sequence['video_path']):

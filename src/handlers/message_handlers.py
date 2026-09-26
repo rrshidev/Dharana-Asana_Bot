@@ -9,6 +9,7 @@ from src.services.video_service import VideoService
 from src.services.subscription_service import SubscriptionService
 from src.services.database_service import db_service
 from src.utils.keyboard_service import KeyboardService
+from src.utils.text_utils import send_markdown_safe
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class MessageHandlers:
 
             # Отправляем описание
             full_text = status_text + asana_data.description
-            await self.bot.send_message(message.from_user.id, full_text, parse_mode=ParseMode.MARKDOWN)
+            await send_markdown_safe(self.bot, message.from_user.id, full_text)
 
             # Отправляем видео или фото
             if video and video['is_premium'] and is_premium:

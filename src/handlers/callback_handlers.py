@@ -13,6 +13,7 @@ from src.services.subscription_service import SubscriptionService
 from src.services.database_service import db_service
 from src.handlers.filter_handlers import FilterHandlers
 from src.utils.keyboard_service import KeyboardService
+from src.utils.text_utils import send_markdown_safe
 from src.handlers.timer_handlers import TimerHandlers
 
 logger = logging.getLogger(__name__)
@@ -314,7 +315,7 @@ class CallbackHandlers:
 
             # Отправляем описание
             full_text = status_text + asana_data.description
-            await self.bot.send_message(user_id, full_text, parse_mode=ParseMode.MARKDOWN)
+            await send_markdown_safe(self.bot, user_id, full_text)
 
             # Отправляем видео или фото
             if video and video['is_premium'] and is_premium:
