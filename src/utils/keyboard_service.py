@@ -39,6 +39,19 @@ class KeyboardService:
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
     @staticmethod
+    def create_stats_menu(lang: str = 'ru', empty: bool = False) -> InlineKeyboardMarkup:
+        """Клавиатура под карточкой статистики.
+
+        Пустая статистика — ведём в таймер (где появляются первые данные),
+        иначе — в главное меню.
+        """
+        buttons = []
+        if empty:
+            buttons.append([InlineKeyboardButton(text=t(lang, 'btn_timer'), callback_data='timer_main')])
+        buttons.append([InlineKeyboardButton(text=t(lang, 'btn_home'), callback_data='main_menu')])
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
     def create_language_menu(lang: str = 'ru') -> InlineKeyboardMarkup:
         """Меню выбора языка бота"""
         buttons = [

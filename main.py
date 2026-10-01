@@ -83,6 +83,7 @@ class YogaBot:
         self.dp.message(Command('info'))(self.command_handlers.info_command)
         self.dp.message(Command('about_us'))(self.command_handlers.about_us_command)
         self.dp.message(Command('language'))(self.command_handlers.language_command)
+        self.dp.message(Command('stats'))(self.command_handlers.stats_command)
         self.dp.message(Command('asana_day'))(self.daily_asana_handlers.daily_asana_command)
         # Админ-команды
         self.dp.message(Command('adm_hlp'))(self.admin_handlers.adm_hlp)
@@ -329,6 +330,7 @@ class YogaBot:
                 BotCommand(command='help', description=t(lang, 'cmd_help')),
                 BotCommand(command='what', description=t(lang, 'cmd_what')),
                 BotCommand(command='info', description=t(lang, 'cmd_info')),
+                BotCommand(command='stats', description=t(lang, 'cmd_stats')),
                 BotCommand(command='language', description=t(lang, 'cmd_language')),
                 BotCommand(command='asana_day', description=t(lang, 'cmd_asana_day')),
                 BotCommand(command='about_us', description=t(lang, 'cmd_about_us')),

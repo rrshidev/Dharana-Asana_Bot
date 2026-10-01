@@ -97,6 +97,49 @@ def format_cycles(lang, n: int) -> str:
     return f"{n} циклов"
 
 
+def t_practices(lang, n: int) -> str:
+    """'1 практика'/'3 практики'/'7 практик' или '1 practice'/'7 practices'."""
+    lang = normalize_lang(lang)
+    if lang == 'en':
+        return f"{n} practice" if n == 1 else f"{n} practices"
+    if n == 1:
+        return f"{n} практика"
+    if n in (2, 3, 4):
+        return f"{n} практики"
+    return f"{n} практик"
+
+
+def t_days(lang, n: int) -> str:
+    """'1 день'/'3 дня'/'9 дней' или '1 day'/'9 days'."""
+    lang = normalize_lang(lang)
+    if lang == 'en':
+        return f"{n} day" if n == 1 else f"{n} days"
+    if n == 1:
+        return f"{n} день"
+    if n in (2, 3, 4):
+        return f"{n} дня"
+    return f"{n} дней"
+
+
+def format_total_time(lang, minutes: int) -> str:
+    """Компактное время: '45 мин' / '1 ч 5 мин' / '2 ч' (EN: '45m' / '1h 5m')."""
+    lang = normalize_lang(lang)
+    hours, mins = divmod(int(minutes or 0), 60)
+    if lang == 'en':
+        parts = []
+        if hours:
+            parts.append(f"{hours}h")
+        if mins or not hours:
+            parts.append(f"{mins}m")
+        return " ".join(parts)
+    parts = []
+    if hours:
+        parts.append(f"{hours} ч")
+    if mins or not hours:
+        parts.append(f"{mins} мин")
+    return " ".join(parts)
+
+
 TRANSLATIONS = {
     'ru': {
         # --- Кнопки ---
@@ -223,6 +266,7 @@ TRANSLATIONS = {
             '----> /about\\_us - об авторах и реализаторах проекта\n'
             '----> /language 🌐 - сменить язык бота (Русский / English)\n'
             '----> /asana\\_day 🌅 - Асана дня (получить и настроить)\n'
+            '----> /stats 📊 - Моя статистика практики\n'
             '----> /pay 💳 - оплата Premium подписки (реквизиты + чек)'
         ),
         'what_text': (
@@ -882,6 +926,31 @@ TRANSLATIONS = {
         'rs_btn_plans': '💳 Узнать о тарифах',
         'rs_menu_back_btn': 'Готовые комплексы',
         'rs_error_alert': 'Произошла ошибка',
+
+        # --- Статистика (/stats) ---
+        'stats_title': '📊 **Статистика практики**',
+        'stats_sessions': '🧘 Практик: {sessions}',
+        'stats_total_time': '⏱ Всего: {time}',
+        'stats_streak': '🔥 Серия: {streak}',
+        'stats_streak_in_row': '{days} подряд',
+        'stats_days': '📅 Дней практики: {days}',
+        'stats_asanas': '🌿 Асан выполнено: {asanas}',
+        'stats_breakdown': '{emoji} {label}: {sessions} · {time}',
+        'stats_favorites': '❤️ Любимые асаны: {asanas}',
+        'stats_app_hint': '📱 Графики и история — в приложении Dharana',
+        'stats_empty': (
+            '📊 **Пока нет статистики**\n\n'
+            'Заверши первую практику с таймером — и здесь появятся твои минуты, '
+            'дни и серии 🧘'
+        ),
+        'stats_error': '⚠️ Не удалось загрузить статистику. Попробуй чуть позже.',
+        'stats_type_asana': 'Асаны',
+        'stats_type_meditation': 'Медитации',
+        'stats_type_pranayama': 'Пранаяма',
+        'type_asana': '🧘',
+        'type_meditation': '🕯',
+        'type_pranayama': '🌬',
+        'cmd_stats': 'Моя статистика практики',
     },
 
     'en': {
@@ -1002,6 +1071,7 @@ TRANSLATIONS = {
             '----> /about\\_us - about the authors of the project\n'
             '----> /language 🌐 - change bot language (English / Русский)\n'
             '----> /asana\\_day 🌅 - Asana of the day (get and configure)\n'
+            '----> /stats 📊 - My practice statistics\n'
             '----> /pay 💳 - pay for the Premium subscription (details + receipt)'
         ),
         'what_text': (
@@ -1658,5 +1728,30 @@ TRANSLATIONS = {
         'rs_btn_plans': '💳 Learn about plans',
         'rs_menu_back_btn': 'Ready-made sequences',
         'rs_error_alert': 'An error occurred',
+
+        # --- Statistics (/stats) ---
+        'stats_title': '📊 **Practice statistics**',
+        'stats_sessions': '🧘 Practices: {sessions}',
+        'stats_total_time': '⏱ Total: {time}',
+        'stats_streak': '🔥 Streak: {streak}',
+        'stats_streak_in_row': '{days} in a row',
+        'stats_days': '📅 Days practised: {days}',
+        'stats_asanas': '🌿 Asanas done: {asanas}',
+        'stats_breakdown': '{emoji} {label}: {sessions} · {time}',
+        'stats_favorites': '❤️ Favourite asanas: {asanas}',
+        'stats_app_hint': '📱 Charts and history — in the Dharana app',
+        'stats_empty': (
+            '📊 **No statistics yet**\n\n'
+            'Finish your first practice with the timer and your minutes, '
+            'days and streak will show up here 🧘'
+        ),
+        'stats_error': '⚠️ Could not load statistics. Try again a bit later.',
+        'stats_type_asana': 'Asanas',
+        'stats_type_meditation': 'Meditations',
+        'stats_type_pranayama': 'Pranayama',
+        'type_asana': '🧘',
+        'type_meditation': '🕯',
+        'type_pranayama': '🌬',
+        'cmd_stats': 'My practice statistics',
     },
 }

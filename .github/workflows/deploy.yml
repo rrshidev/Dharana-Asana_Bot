@@ -33,7 +33,7 @@ jobs:
 
       - name: Syntax check
         run: |
-          python -m py_compile src/handlers/timer_handlers.py src/services/user_service.py main.py
+          python -m py_compile src/handlers/timer_handlers.py src/handlers/command_handlers.py src/services/user_service.py src/utils/stats_formatter.py main.py
 
       - name: Run tests
         run: pytest -q

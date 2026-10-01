@@ -7,7 +7,9 @@ from aiogram.filters import Command
 
 from src.i18n import t, lang_from_telegram
 from src.services.database_service import db_service
+from src.services.user_service import UserService
 from src.utils.keyboard_service import KeyboardService
+from src.utils.stats_formatter import format_stats, has_practice_data
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class CommandHandlers:
     def __init__(self, bot):
         self.bot = bot
         self.keyboard_service = KeyboardService()
+        self.user_service = UserService()  # чтение общей статистики из API
 
     @staticmethod
     def _lang(message: types.Message) -> str:
@@ -146,4 +149,26 @@ class CommandHandlers:
             t(lang, 'lang_menu_title'),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=self.keyboard_service.create_language_menu(lang),
+        )
+
+    async def stats_command(self, message: types.Message):
+        """Обработчик команды /stats — сводная статистика практики"""
+        lang = self._lang(message)
+        telegram_id = message.from_user.id
+
+        stats = await self.user_service.fetch_stats(telegram_id)
+        if stats is None:
+            logger.warning(f"No stats available for {telegram_id}")
+            await message.reply(
+                t(lang, 'stats_error'),
+                reply_markup=self.keyboard_service.create_stats_menu(lang, empty=True),
+            )
+            return
+
+        await message.reply(
+            format_stats(lang, stats),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_stats_menu(
+                lang, empty=not has_practice_data(stats)
+            ),
         )

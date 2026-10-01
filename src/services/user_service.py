@@ -12,7 +12,7 @@ TIMER_BOT_KEY = os.getenv("TIMER_BOT_KEY", "")
 
 
 class UserService:
-    """Запись завершённой практики таймера в общую статистику Dharana.
+    """Обмен с общей статистикой Dharana (единый источник — dharana-api).
 
     Единый источник статистики — dharana-api (та же БД, что у app/web).
     Контракт совпадает с timerasana: POST /api/v1/practice/timer,
@@ -22,6 +22,38 @@ class UserService:
     def __init__(self, api_url: str = API_URL, timer_bot_key: str = TIMER_BOT_KEY):
         self.api_url = api_url
         self.timer_bot_key = timer_bot_key
+
+    def _headers(self) -> dict:
+        headers: dict = {}
+        if self.timer_bot_key:
+            headers["X-Timer-Key"] = self.timer_bot_key
+        return headers
+
+    async def fetch_stats(self, telegram_id: int) -> Optional[dict]:
+        """Сводная статистика практик пользователя: GET /api/v1/practice/timer/stats.
+
+        Бот знает telegram_id, но не имеет JWT — авторизация та же, что у записи
+        практики (X-Timer-Key). Возвращает агрегаты API (минуты, дни, серия,
+        разбивка по типам, топ-асаны) или None, если данных/пользователя нет.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{self.api_url}/api/v1/practice/timer/stats",
+                    headers=self._headers(),
+                    params={"telegram_id": telegram_id},
+                    timeout=10,
+                )
+            if resp.status_code == 200:
+                return resp.json()
+            if resp.status_code != 404:
+                logger.warning(
+                    f"Fetch stats failed for {telegram_id}: {resp.status_code} {resp.text}"
+                )
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching stats for {telegram_id}: {e}")
+            return None
 
     async def record_practice(
         self,
@@ -40,13 +72,10 @@ class UserService:
         if total_duration_seconds is None or total_duration_seconds <= 0:
             return False
         try:
-            headers: dict = {}
-            if self.timer_bot_key:
-                headers["X-Timer-Key"] = self.timer_bot_key
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{self.api_url}/api/v1/practice/timer",
-                    headers=headers,
+                    headers=self._headers(),
                     json={
                         "telegram_id": telegram_id,
                         "practice_type": practice_type,
