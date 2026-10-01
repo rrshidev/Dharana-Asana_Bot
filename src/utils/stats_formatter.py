@@ -27,13 +27,27 @@ def _int(value, default: int = 0) -> int:
         return default
 
 
+def _localized(value: str, localize_name=None) -> str:
+    """Прогнать имя асаны через локализатор бота (EN-имя), с безопасным откатом."""
+    if not localize_name:
+        return value
+    try:
+        return localize_name(value) or value
+    except Exception:
+        return value
+
+
 def has_practice_data(stats: dict) -> bool:
     """Есть ли что показывать (пустую карточку не рисуем)."""
     return bool(stats) and _int(stats.get("total_sessions")) > 0
 
 
-def format_stats(lang: str, stats: dict) -> str:
-    """Карточка статистики на языке бота. Markdown (для aiogram ParseMode.MARKDOWN)."""
+def format_stats(lang: str, stats: dict, localize_name=None) -> str:
+    """Карточка статистики на языке бота. Markdown (для aiogram ParseMode.MARKDOWN).
+
+    localize_name — вызов DataService.localized_asana_name, чтобы топ-асан в EN
+    показывался латиницей (в API хранится каноническое кириллическое имя).
+    """
     if not has_practice_data(stats):
         return t(lang, 'stats_empty')
 
@@ -78,7 +92,10 @@ def format_stats(lang: str, stats: dict) -> str:
         if isinstance(item, dict) and item.get("name")
     ][:TOP_ASANAS_LIMIT]
     if favorites:
-        names = ', '.join(f"{item['name']} ×{_int(item.get('count'), 1)}" for item in favorites)
+        names = ', '.join(
+            f"{_localized(item['name'], localize_name)} ×{_int(item.get('count'), 1)}"
+            for item in favorites
+        )
         lines.append('')
         lines.append(t(lang, 'stats_favorites', asanas=names))
 

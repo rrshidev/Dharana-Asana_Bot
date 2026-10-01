@@ -79,6 +79,36 @@ def test_en_card():
     assert '📱 Charts and history — in the Dharana app' in text
 
 
+def test_en_favorites_localized():
+    """EN-карточка показывает асаны латиницей (API отдаёт канонические имена)."""
+    mapping = {
+        "Бакасана": "BAKASANA",
+        "Триконасана": "TRIKONASANA",
+        "Адхо мукха шванасана": "ADHO MUKHA SVANASANA",
+    }
+    text = format_stats('en', STATS, lambda name: mapping.get(name))
+    favorites_line = next(line for line in text.splitlines() if line.startswith('❤️'))
+    assert favorites_line == (
+        '❤️ Favourite asanas: BAKASANA ×4, TRIKONASANA ×2, '
+        'ADHO MUKHA SVANASANA ×2'
+    )
+    assert 'Бакасана' not in text
+
+
+def test_localizer_fallbacks():
+    """Нет EN-имени или локализатор упал — остаётся каноническое имя."""
+    text = format_stats('en', STATS, lambda name: None)
+    favorites_line = next(line for line in text.splitlines() if line.startswith('❤️'))
+    assert 'BAKASANA' not in favorites_line
+    assert 'Бакасана ×4' in favorites_line
+
+    def boom(name):
+        raise RuntimeError('catalog unavailable')
+
+    text = format_stats('en', STATS, boom)
+    assert 'Бакасана ×4' in text
+
+
 def test_card_is_short():
     """Коротко: не больше 14 строк и без подряд идущих пустых."""
     lines = format_stats('ru', STATS).splitlines()

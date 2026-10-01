@@ -44,7 +44,7 @@ class YogaBot:
         subscription_service = SubscriptionService(db_service)
         
         # Инициализация обработчиков
-        self.command_handlers = CommandHandlers(self.bot)
+        self.command_handlers = CommandHandlers(self.bot, data_service)
         self.callback_handlers = CallbackHandlers(self.bot)
         self.message_handlers = MessageHandlers(self.bot)
         self.ready_sequence_handlers = ReadySequenceHandlers(self.bot, subscription_service)

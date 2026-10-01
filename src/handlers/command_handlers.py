@@ -7,6 +7,7 @@ from aiogram.filters import Command
 
 from src.i18n import t, lang_from_telegram
 from src.services.database_service import db_service
+from src.services.data_service import DataService
 from src.services.user_service import UserService
 from src.utils.keyboard_service import KeyboardService
 from src.utils.stats_formatter import format_stats, has_practice_data
@@ -19,10 +20,19 @@ API_URL = os.getenv("API_URL", "http://dharana-api:8000")
 class CommandHandlers:
     """Обработчики команд бота"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, data_service=None):
         self.bot = bot
         self.keyboard_service = KeyboardService()
         self.user_service = UserService()  # чтение общей статистики из API
+        # Каталог бота: даёт локализованные (EN) имена асан для /stats.
+        self.data_service = data_service or DataService()
+
+    def _asana_name_localizer(self, lang: str):
+        """Локализация имён асан (EN) с безопасным откатом на каноническое имя."""
+        def localize(name: str) -> str:
+            return self.data_service.localized_asana_name(name, lang)
+
+        return localize
 
     @staticmethod
     def _lang(message: types.Message) -> str:
@@ -166,7 +176,7 @@ class CommandHandlers:
             return
 
         await message.reply(
-            format_stats(lang, stats),
+            format_stats(lang, stats, self._asana_name_localizer(lang)),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=self.keyboard_service.create_stats_menu(
                 lang, empty=not has_practice_data(stats)
