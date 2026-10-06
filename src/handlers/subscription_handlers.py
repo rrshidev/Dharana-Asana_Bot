@@ -66,6 +66,7 @@ class SubscriptionHandlers:
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text=t(lang, 'sub_btn_month'), callback_data="subscription_monthly")],
+                [InlineKeyboardButton(text=t(lang, 'sub_btn_quarter'), callback_data="subscription_quarterly")],
                 [InlineKeyboardButton(text=t(lang, 'sub_btn_year'), callback_data="subscription_yearly")],
                 [InlineKeyboardButton(text=t(lang, 'btn_back'), callback_data="subscription_plans")]
             ])
@@ -122,6 +123,27 @@ class SubscriptionHandlers:
 
         # Временно показываем реквизиты и просим прислать чек (мок-оплата)
         text = t(lang, 'sub_monthly_buy')
+
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=t(lang, 'sub_btn_pay'), callback_data="pay_now")],
+            [InlineKeyboardButton(text=t(lang, 'btn_back'), callback_data="subscription_plans")]
+        ])
+
+        await self.bot.edit_message_text(
+            chat_id=user_id,
+            message_id=callback_query.message.message_id,
+            text=text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=keyboard
+        )
+
+    async def subscription_quarterly_callback(self, callback_query: types.CallbackQuery):
+        """Обработка покупки подписки на 3 месяца"""
+        await self.bot.answer_callback_query(callback_query.id)
+        user_id = callback_query.from_user.id
+        lang = self._lang(user_id)
+
+        text = t(lang, 'sub_quarterly_buy')
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text=t(lang, 'sub_btn_pay'), callback_data="pay_now")],

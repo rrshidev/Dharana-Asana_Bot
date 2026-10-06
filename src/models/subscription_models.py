@@ -10,6 +10,7 @@ class SubscriptionType(Enum):
     """Типы подписок"""
     TRIAL = "trial"
     MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
     YEARLY = "yearly"
     LIFETIME = "lifetime"
 
@@ -29,7 +30,7 @@ class UserSubscription(Base):
     
     # Статус подписки
     is_premium = Column(Boolean, default=False)
-    subscription_type = Column(String(20), default=None)  # trial, monthly, yearly
+    subscription_type = Column(String(20), default=None)  # trial, monthly, quarterly, yearly
     subscription_status = Column(String(20), default=None)  # active, expired, cancelled
     
     # Даты подписки
@@ -117,6 +118,8 @@ class UserSubscription(Base):
         
         if subscription_type == SubscriptionType.MONTHLY:
             duration_days = 30
+        elif subscription_type == SubscriptionType.QUARTERLY:
+            duration_days = 90
         elif subscription_type == SubscriptionType.YEARLY:
             duration_days = 365
         elif subscription_type == SubscriptionType.LIFETIME:
@@ -145,16 +148,23 @@ class SubscriptionPlan:
         'monthly': {
             'name': 'Месячная подписка',
             'duration_days': 30,
-            'price': 399,
+            'price': 349,
             'currency': 'RUB',
             'description': 'Полный доступ на 30 дней'
+        },
+        'quarterly': {
+            'name': 'Подписка на 3 месяца',
+            'duration_days': 90,
+            'price': 890,
+            'currency': 'RUB',
+            'description': 'Полный доступ на 90 дней'
         },
         'yearly': {
             'name': 'Годовая подписка',
             'duration_days': 365,
-            'price': 2990,
+            'price': 2690,
             'currency': 'RUB',
-            'description': 'Экономия 1800₽! Полный доступ на год'
+            'description': 'Экономия 1498₽! Полный доступ на год'
         }
     }
     

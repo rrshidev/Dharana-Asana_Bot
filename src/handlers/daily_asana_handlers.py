@@ -857,6 +857,7 @@ class DailyAsanaHandlers:
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text=t(lang, 'prem_btn_monthly'), callback_data="premium_buy_monthly")],
+                [InlineKeyboardButton(text=t(lang, 'prem_btn_quarterly'), callback_data="premium_buy_quarterly")],
                 [InlineKeyboardButton(text=t(lang, 'prem_btn_yearly'), callback_data="premium_buy_yearly")],
                 [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data="main_menu")]
             ]

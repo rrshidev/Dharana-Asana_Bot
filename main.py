@@ -178,10 +178,12 @@ class YogaBot:
         self.dp.callback_query(F.data == 'subscription_trial')(self.subscription_handlers.subscription_trial_callback)
         self.dp.callback_query(F.data == 'subscription_features')(self.subscription_handlers.subscription_features_callback)
         self.dp.callback_query(F.data == 'subscription_monthly')(self.subscription_handlers.subscription_monthly_callback)
+        self.dp.callback_query(F.data == 'subscription_quarterly')(self.subscription_handlers.subscription_quarterly_callback)
         self.dp.callback_query(F.data == 'subscription_yearly')(self.subscription_handlers.subscription_yearly_callback)
         self.dp.callback_query(F.data == 'subscription_status')(self.subscription_handlers.subscription_status_callback)
         # Кнопки оформления подписки из премиум-предложений (асана дня и карточки асан)
         self.dp.callback_query(F.data == 'premium_buy_monthly')(self.subscription_handlers.subscription_monthly_callback)
+        self.dp.callback_query(F.data == 'premium_buy_quarterly')(self.subscription_handlers.subscription_quarterly_callback)
         self.dp.callback_query(F.data == 'premium_buy_yearly')(self.subscription_handlers.subscription_yearly_callback)
         logger.info("Subscription handlers registered")
         
