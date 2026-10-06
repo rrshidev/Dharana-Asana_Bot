@@ -7,6 +7,11 @@ from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.types import BufferedInputFile
 
+from src.config import (
+    PREMIUM_MONTHLY_PRICE,
+    PREMIUM_QUARTERLY_PRICE,
+    PREMIUM_YEARLY_PRICE,
+)
 from src.i18n import t
 from src.services.database_service import db_service
 
@@ -20,9 +25,14 @@ ADMIN_TELEGRAM_ID = os.getenv("ADMIN_TELEGRAM_ID", "")
 awaiting_receipt = set()
 
 
-def _pay_text(lang: str) -> str:
-    return (
-        t(lang, 'pay_text')
+def _pay_text(lang: str, requisites: str) -> str:
+    return t(lang, 'pay_text').format(
+        requisites=requisites,
+        m_price=PREMIUM_MONTHLY_PRICE,
+        q_price=PREMIUM_QUARTERLY_PRICE,
+        y_price=PREMIUM_YEARLY_PRICE,
+        q_save=PREMIUM_MONTHLY_PRICE * 3 - PREMIUM_QUARTERLY_PRICE,
+        y_save=PREMIUM_MONTHLY_PRICE * 12 - PREMIUM_YEARLY_PRICE,
     )
 
 
@@ -64,12 +74,12 @@ class PaymentHandlers:
 
         # Получатель указывается один раз в _pay_text (он уже выше списка карт)
         if is_callback:
-            return _pay_text(lang).format(requisites="\n".join(lines)), None
+            return _pay_text(lang, "\n".join(lines)), None
 
         awaiting_receipt.add(chat_id)
         await self.bot.send_message(
             chat_id,
-            _pay_text(lang).format(requisites="\n".join(lines)),
+            _pay_text(lang, "\n".join(lines)),
             parse_mode=ParseMode.HTML,
         )
 

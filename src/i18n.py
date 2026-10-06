@@ -882,7 +882,11 @@ TRANSLATIONS = {
 
         # --- Оплата (payments) ---
         'pay_text': '💳 <b>Оплата подписки Premium</b>\n\n'
-                    'Переведите сумму на одну из карт (получатель: <b>Руслан Дмитриевич С.</b>) '
+                    '<b>Тарифы:</b>\n'
+                    '• 1 месяц — {m_price} ₽\n'
+                    '• 3 месяца — {q_price} ₽ (экономия {q_save} ₽)\n'
+                    '• 1 год — {y_price} ₽ (экономия {y_save} ₽)\n\n'
+                    'Переведите нужную сумму на одну из карт (получатель: <b>Руслан Дмитриевич С.</b>) '
                     'и отправьте сюда скриншот/фото чека об оплате.\n'
                     'После проверки админом Premium будет открыт.\n\n'
                     'Реквизиты:\n'
@@ -1687,7 +1691,11 @@ TRANSLATIONS = {
 
         # --- Payments ---
         'pay_text': '💳 <b>Premium subscription payment</b>\n\n'
-                    'Transfer the amount to one of the cards (recipient: <b>Ruslan Dmitrievich S.</b>) '
+                    '<b>Plans:</b>\n'
+                    '• 1 month — {m_price} ₽\n'
+                    '• 3 months — {q_price} ₽ (save {q_save} ₽)\n'
+                    '• 1 year — {y_price} ₽ (save {y_save} ₽)\n\n'
+                    'Transfer the required amount to one of the cards (recipient: <b>Ruslan Dmitrievich S.</b>) '
                     'and send a screenshot/photo of the payment receipt here.\n'
                     'After verification by the admin, Premium will be activated.\n\n'
                     'Requisites:\n'
