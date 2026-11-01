@@ -15,6 +15,11 @@ from src.utils.stats_formatter import format_stats, has_practice_data
 logger = logging.getLogger(__name__)
 
 API_URL = os.getenv("API_URL", "http://dharana-api:8000")
+BOT_ADMIN_KEY = os.getenv("BOT_ADMIN_KEY", "")
+# API принимает create-code только от бота (X-Bot-Key).
+BOT_HEADERS = {"X-Bot-Key": BOT_ADMIN_KEY} if BOT_ADMIN_KEY else {}
+if not BOT_ADMIN_KEY:
+    logger.warning("BOT_ADMIN_KEY is not set — API create-code will reject requests")
 
 
 class CommandHandlers:
@@ -60,6 +65,7 @@ class CommandHandlers:
                         "username": username,
                         "language": tg_lang,
                     },
+                    headers=BOT_HEADERS,
                     timeout=10,
                 )
         except Exception as e:
@@ -87,6 +93,7 @@ class CommandHandlers:
                             "username": username,
                             "language": tg_lang,
                         },
+                        headers=BOT_HEADERS,
                         timeout=10,
                     )
                     if resp.status_code == 200:
