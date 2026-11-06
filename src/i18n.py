@@ -245,7 +245,13 @@ TRANSLATIONS = {
             "• **Готовые комплексы** и **генератор практики** под твои цели\n"
             "• **Многофункциональный таймер** для медитаций и практики асан\n"
             "• **Асану дня** — чтобы оставаться в тонусе каждый день\n\n"
-            "Выбери действие ниже и начнём практику!"
+            "Выбери действие ниже и начнём практику!\n\n"
+            "🔒 **Конфиденциальность**\n"
+            "При запуске бота мы сохраняем ваш Telegram ID, имя и username, "
+            "чтобы бот мог работать. Запуская бота, вы соглашаетесь с "
+            "[Политикой конфиденциальности](https://dharana.ru/ru/privacy) "
+            "и обработкой персональных данных. "
+            "Если вы не согласны — пожалуйста, не используйте бота."
         ),
         'help_text': (
             'Напиши название асаны и получишь её описание и фото\n\n'
@@ -332,7 +338,11 @@ TRANSLATIONS = {
             "Хорошей практики! 🙏\n\n"
             "Связаться с нами:\n"
             "@RrshiDev · @yogaolleg\n"
-            "instagram.com/yogaolleg/"
+            "instagram.com/yogaolleg/\n\n"
+            "🔒 **Персональные данные**\n"
+            "Мы обрабатываем Telegram ID, имя и username, чтобы бот работал. "
+            "Подробнее: [Политика конфиденциальности](https://dharana.ru/ru/privacy) · "
+            "[Согласие на обработку персональных данных](https://dharana.ru/ru/consent)."
         ),
 
         # --- Категории каталога ---
@@ -1057,7 +1067,13 @@ TRANSLATIONS = {
             "• **Ready sequences** and a **practice generator** for your goals\n"
             "• **Multifunctional timer** for meditation and asana practice\n"
             "• **Asana of the day** — to keep you in shape every day\n\n"
-            "Choose an action below and let's start practicing!"
+            "Choose an action below and let's start practicing!\n\n"
+            "🔒 **Privacy**\n"
+            "When you start the bot, we store your Telegram ID, first name and username "
+            "so that the bot can work. By starting the bot, you agree to the "
+            "[Privacy Policy](https://dharana.ru/en/privacy) "
+            "and to personal data processing. "
+            "If you disagree, please do not use the bot."
         ),
         'help_text': (
             'Type the name of an asana and get its description and photo\n\n'
@@ -1143,7 +1159,11 @@ TRANSLATIONS = {
             "Have a great practice! 🙏\n\n"
             "Contact us:\n"
             "@RrshiDev · @yogaolleg\n"
-            "instagram.com/yogaolleg/"
+            "instagram.com/yogaolleg/\n\n"
+            "🔒 **Personal data**\n"
+            "We process your Telegram ID, first name and username so that the bot can work. "
+            "Learn more: [Privacy Policy](https://dharana.ru/en/privacy) · "
+            "[Consent to personal data processing](https://dharana.ru/en/consent)."
         ),
 
         'cat_name_sit_lie+': 'Seated & lying asanas',
