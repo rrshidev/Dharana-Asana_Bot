@@ -109,6 +109,7 @@ class YogaBot:
         self.dp.callback_query(F.data == 'steps')(self.callback_handlers.steps_callback)
         self.dp.callback_query(F.data == 'random_asana')(self.callback_handlers.random_asana_callback)
         self.dp.callback_query(F.data == 'about')(self.callback_handlers.about_callback)
+        self.dp.callback_query(F.data == 'socials')(self.callback_handlers.socials_callback)
         self.dp.callback_query(F.data == 'filter_menu')(self.callback_handlers.filter_menu_callback)
         self.dp.callback_query(F.data == 'filter_difficulty_menu')(self.callback_handlers.filter_difficulty_menu_callback)
         self.dp.callback_query(F.data == 'filter_effect_menu')(self.callback_handlers.filter_effect_menu_callback)

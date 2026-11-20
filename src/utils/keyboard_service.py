@@ -16,6 +16,7 @@ class KeyboardService:
             [InlineKeyboardButton(text=t(lang, 'btn_timer'), callback_data='timer_main')],
             [InlineKeyboardButton(text=t(lang, 'btn_random_asana'), callback_data='random_asana')],
             [InlineKeyboardButton(text=t(lang, 'btn_premium'), callback_data='subscription_plans')],
+            [InlineKeyboardButton(text=t(lang, 'btn_socials'), callback_data='socials')],
             [InlineKeyboardButton(text=t(lang, 'btn_language'), callback_data='lang_menu')],
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -33,6 +34,7 @@ class KeyboardService:
             [InlineKeyboardButton(text=t(lang, 'btn_generator'), callback_data='sequence_menu')],
             [InlineKeyboardButton(text=t(lang, 'btn_filters'), callback_data='filter_menu')],
             [InlineKeyboardButton(text=t(lang, 'btn_start_screen'), callback_data='start_screen')],
+            [InlineKeyboardButton(text=t(lang, 'btn_socials'), callback_data='socials')],
             [InlineKeyboardButton(text=t(lang, 'btn_about'), callback_data='about')],
             [InlineKeyboardButton(text=t(lang, 'btn_language'), callback_data='lang_menu')],
         ]
@@ -150,3 +152,16 @@ class KeyboardService:
         return InlineKeyboardMarkup(
             inline_keyboard=[[InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data='main_menu')]]
         )
+
+    @staticmethod
+    def create_socials_menu(lang: str = 'ru') -> InlineKeyboardMarkup:
+        """??????? ???? ?????????? ????? (??????)"""
+        buttons = [
+            [InlineKeyboardButton(text='Telegram', url='https://t.me/dharana_yoga')],
+            [InlineKeyboardButton(text='MAX', url='https://max.ru/se15040381_bot')],
+            [InlineKeyboardButton(text='Instagram', url='https://www.instagram.com/timerasana_bot')],
+            [InlineKeyboardButton(text='YouTube', url='https://youtube.com/channel/UC1q01jpORkhy5hdTo6BaXug?si=J-ySo-FH-V7c0UK2')],
+            [InlineKeyboardButton(text='TikTok', url='https://www.tiktok.com/@dharana.project')],
+            [InlineKeyboardButton(text=t(lang, 'btn_back_main'), callback_data='main_menu')],
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)

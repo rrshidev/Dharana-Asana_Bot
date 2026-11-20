@@ -407,6 +407,18 @@ class CallbackHandlers:
             reply_markup=self.keyboard_service.create_main_menu(lang)
         )
 
+
+    async def socials_callback(self, callback_query: types.CallbackQuery):
+        """???????? ?????? ?? ?????????? ????"""
+        await self.bot.answer_callback_query(callback_query.id)
+        lang = self._lang(callback_query.from_user.id)
+        await self.bot.send_message(
+            callback_query.from_user.id,
+            t(lang, 'socials_text'),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=self.keyboard_service.create_socials_menu(lang)
+        )
+
     async def filter_menu_callback(self, callback_query: types.CallbackQuery):
         """Обработчик меню фильтров"""
         await self.filter_handlers.show_filter_menu_callback(callback_query)

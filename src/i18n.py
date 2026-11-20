@@ -321,6 +321,10 @@ TRANSLATIONS = {
             'Рекомеднуется осваивать этот раздел йоги с опытным наставником. '
             'Обязательно выполняйте разминку перед началом практики.'
         ),
+        'socials_text': (
+            "?? **???? ?????????? ????**\n\n"
+            "??????????????, ????? ???? ? ????? ???????, ???????? ? ?????????? ???????."
+        ),
         'about_us_text': (
             "🙏 **О проекте и его авторах**\n\n"
             "Меня зовут **Руслан** — я автор и разработчик бота Dharana. "
@@ -1141,6 +1145,10 @@ TRANSLATIONS = {
             'if you have chronic diseases or mental conditions. '
             'It is recommended to learn this part of yoga with an experienced instructor. '
             'Always warm up before practice.'
+        ),
+        'socials_text': (
+            "?? **Our social networks**\n\n"
+            "Subscribe to stay up to date with practices, news and project updates."
         ),
         'about_us_text': (
             "🙏 **About the project and its authors**\n\n"
