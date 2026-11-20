@@ -156,7 +156,7 @@ TRANSLATIONS = {
         'btn_filters': '🔍 Фильтры асан',
         'btn_start_screen': '🏠 На главный экран',
         'btn_about': 'ℹ️ О боте',
-        'btn_socials': '?? ???? ???????',
+        'btn_socials': '📣 Наши соцсети',
         'btn_back': '🔙 Назад',
         'btn_back_catalog': '🔙 Назад в каталог',
         'btn_back_filters': '🔙 Назад к фильтрам',
@@ -323,8 +323,8 @@ TRANSLATIONS = {
             'Обязательно выполняйте разминку перед началом практики.'
         ),
         'socials_text': (
-            "?? **???? ?????????? ????**\n\n"
-            "??????????????, ????? ???? ? ????? ???????, ???????? ? ?????????? ???????."
+            "📣 **Наши социальные сети**\n\n"
+            "Подписывайтесь, чтобы быть в курсе практик, новостей и обновлений проекта."
         ),
         'about_us_text': (
             "🙏 **О проекте и его авторах**\n\n"
@@ -990,7 +990,7 @@ TRANSLATIONS = {
         'btn_filters': '🔍 Asana filters',
         'btn_start_screen': '🏠 Go to home screen',
         'btn_about': 'ℹ️ About the bot',
-        'btn_socials': '?? Our socials',
+        'btn_socials': '📣 Our socials',
         'btn_back': '🔙 Back',
         'btn_back_catalog': '🔙 Back to catalog',
         'btn_back_filters': '🔙 Back to filters',
@@ -1149,7 +1149,7 @@ TRANSLATIONS = {
             'Always warm up before practice.'
         ),
         'socials_text': (
-            "?? **Our social networks**\n\n"
+            "📣 **Our social networks**\n\n"
             "Subscribe to stay up to date with practices, news and project updates."
         ),
         'about_us_text': (
