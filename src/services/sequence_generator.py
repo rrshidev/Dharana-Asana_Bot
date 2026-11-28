@@ -1,6 +1,6 @@
 import random
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import timedelta
 
 from src.models.sequence_models import (
@@ -8,6 +8,7 @@ from src.models.sequence_models import (
     SequenceDifficulty, SequenceFocus, SequenceDuration
 )
 from src.services.data_service import DataService
+from src.data.asana_effects import ASANA_DIFFICULTY
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +37,11 @@ class SequenceGenerator:
             logger.info(f"Category {category_name}: {len(category.asanas)} asanas")
             
             for asana in category.asanas:
-                # Группируем по сложности
-                if hasattr(asana, 'difficulty') and asana.difficulty:
-                    try:
-                        difficulty_num = int(asana.difficulty) if isinstance(asana.difficulty, str) else asana.difficulty
-                        if 1 <= difficulty_num <= 5:
-                            self.asanas_by_difficulty[difficulty_num].append(asana)
-                    except (ValueError, TypeError):
-                        # Если сложность не может быть конвертирована в число, пропускаем
-                        continue
-                
+                # Группируем по сложности (имена асан в каталоге — строки)
+                difficulty_num = self._asana_difficulty(asana)
+                if difficulty_num is not None:
+                    self.asanas_by_difficulty[difficulty_num].append(asana)
+
                 # Группируем по эффектам
                 if hasattr(asana, 'effects') and asana.effects:
                     try:
@@ -65,7 +61,22 @@ class SequenceGenerator:
         # Логируем распределение по сложности
         for diff, asanas in self.asanas_by_difficulty.items():
             logger.info(f"Difficulty {diff}: {len(asanas)} asanas")
-    
+
+    def _asana_difficulty(self, asana) -> Optional[int]:
+        """Уровень сложности асаны; category.asanas в каталоге — просто строки."""
+        value = ASANA_DIFFICULTY.get(asana) if isinstance(asana, str) else getattr(asana, 'difficulty', None)
+        try:
+            value = int(value) if isinstance(value, str) else value
+        except (ValueError, TypeError):
+            return None
+        return value if isinstance(value, int) and 1 <= value <= 5 else None
+
+    def _resolve_asana(self, asana):
+        """Превращает имя из каталога в AsanaData с описанием и картинкой."""
+        if not isinstance(asana, str):
+            return asana
+        return self.data_service.get_asana_data(asana) or asana
+
     def generate_sequence(self, params: SequenceParams) -> PracticeSequence:
         """Генерирует последовательность асан по параметрам"""
         logger.info(f"Generating sequence: {params.difficulty.value}, {params.duration.value}min, {params.focus.value}")
@@ -126,21 +137,13 @@ class SequenceGenerator:
             if category in self.asanas_by_category:
                 logger.info(f"Found {len(self.asanas_by_category[category])} asanas in category {category}")
                 for asana in self.asanas_by_category[category]:
-                    # Если у асаны нет сложности или она некорректная, все равно добавляем для начинающих
-                    if not hasattr(asana, 'difficulty') or not asana.difficulty:
-                        if difficulty == SequenceDifficulty.BEGINNER:
-                            available_asanas.append(asana)
-                        continue
-                    
-                    try:
-                        difficulty_num = int(asana.difficulty) if isinstance(asana.difficulty, str) else asana.difficulty
+                    difficulty_num = self._asana_difficulty(asana)
+                    if difficulty_num is not None:
                         if difficulty_num <= self._difficulty_to_number(difficulty):
                             available_asanas.append(asana)
-                    except (ValueError, TypeError):
-                        # Если сложность не может быть конвертирована, добавляем для начинающих
-                        if difficulty == SequenceDifficulty.BEGINNER:
-                            available_asanas.append(asana)
-                        continue
+                    elif difficulty == SequenceDifficulty.BEGINNER:
+                        # Нет уровня сложности — разрешаем только начинающим
+                        available_asanas.append(asana)
             else:
                 logger.warning(f"Category {category} not found")
         
@@ -153,8 +156,9 @@ class SequenceGenerator:
         else:
             # Если нет подходящих асан, создаем заглушку
             selected_asanas = []
-        
+
         for asana in selected_asanas:
+            asana = self._resolve_asana(asana)
             # Проверяем тип асаны и получаем имя
             if isinstance(asana, str):
                 asana_name = asana
@@ -182,11 +186,11 @@ class SequenceGenerator:
         
         # Маппинг фокусов на категории и эффекты
         focus_mapping = {
-            SequenceFocus.BACK: ['sag+', 'coup+'],  # прогибы и стоячие
-            SequenceFocus.LEGS: ['coup+', 'sit_lie+'],  # стоячие и сидячие/лежачие
-            SequenceFocus.BALANCE: ['stay+'],  # балансы
+            SequenceFocus.BACK: ['sag+', 'coup+'],  # прогибы и перевёрнутые
+            SequenceFocus.LEGS: ['coup+', 'sit_lie+'],  # перевёрнутые и сидячие/лежачие
+            SequenceFocus.BALANCE: ['stay+', 'hand+'],  # балансы стоя и на руках
             SequenceFocus.FLEXIBILITY: ['sit_lie+', 'sag+'],  # сидячие/лежачие и прогибы
-            SequenceFocus.ENERGY: ['coup+', 'power+']  # стоячие и силовые
+            SequenceFocus.ENERGY: ['coup+', 'power+', 'hand+']  # перевёрнутые, силовые и балансы на руках
         }
         
         target_categories = focus_mapping.get(focus, ['coup+', 'sit_lie+'])  # по умолчанию стоячие и сидячие/лежачие
@@ -196,22 +200,14 @@ class SequenceGenerator:
             if category in self.asanas_by_category:
                 logger.info(f"Checking category {category} for focus {focus.value}")
                 for asana in self.asanas_by_category[category]:
-                    # Если у асаны нет сложности или она некорректная, добавляем для начинающих
-                    if not hasattr(asana, 'difficulty') or not asana.difficulty:
-                        if difficulty == SequenceDifficulty.BEGINNER:
-                            available_asanas.append(asana)
-                        continue
-                    
-                    try:
-                        difficulty_num = int(asana.difficulty) if isinstance(asana.difficulty, str) else asana.difficulty
+                    difficulty_num = self._asana_difficulty(asana)
+                    if difficulty_num is not None:
                         if difficulty_num <= self._difficulty_to_number(difficulty):
                             available_asanas.append(asana)
-                            logger.info(f"Added asana {getattr(asana, 'name', 'Unknown')} with difficulty {difficulty_num}")
-                    except (ValueError, TypeError):
-                        # Если сложность не может быть конвертирована, добавляем для начинающих
-                        if difficulty == SequenceDifficulty.BEGINNER:
-                            available_asanas.append(asana)
-                        continue
+                            logger.info(f"Added asana {asana if isinstance(asana, str) else getattr(asana, 'name', 'Unknown')} with difficulty {difficulty_num}")
+                    elif difficulty == SequenceDifficulty.BEGINNER:
+                        # Нет уровня сложности — разрешаем только начинающим
+                        available_asanas.append(asana)
         
         # Добавляем отдых между асанами
         num_asanas = min(5, total_time // (time_per_asana + 15))  # +15с на отдых
@@ -229,6 +225,7 @@ class SequenceGenerator:
         selected_asanas = random.sample(available_asanas, min(num_asanas, len(available_asanas)))
         
         for i, asana in enumerate(selected_asanas):
+            asana = self._resolve_asana(asana)
             # Проверяем тип асаны и получаем имя
             if isinstance(asana, str):
                 asana_name = asana
@@ -271,18 +268,15 @@ class SequenceGenerator:
         for category in cooldown_categories:
             if category in self.asanas_by_category:
                 for asana in self.asanas_by_category[category]:
-                    if hasattr(asana, 'difficulty') and asana.difficulty:
-                        try:
-                            difficulty_num = int(asana.difficulty) if isinstance(asana.difficulty, str) else asana.difficulty
-                            if difficulty_num <= self._difficulty_to_number(difficulty):
-                                available_asanas.append(asana)
-                        except (ValueError, TypeError):
-                            continue
+                    difficulty_num = self._asana_difficulty(asana)
+                    if difficulty_num is not None and difficulty_num <= self._difficulty_to_number(difficulty):
+                        available_asanas.append(asana)
         
         num_asanas = min(2, total_time // time_per_asana)
         selected_asanas = random.sample(available_asanas, min(num_asanas, len(available_asanas)))
-        
+
         for asana in selected_asanas:
+            asana = self._resolve_asana(asana)
             # Проверяем тип асаны и получаем имя
             if isinstance(asana, str):
                 asana_name = asana
@@ -308,24 +302,16 @@ class SequenceGenerator:
         mapping = {
             SequenceDifficulty.BEGINNER: 2,
             SequenceDifficulty.INTERMEDIATE: 3,
-            SequenceDifficulty.ADVANCED: 4
+            SequenceDifficulty.ADVANCED: 5
         }
         return mapping.get(difficulty, 3)
     
-    def _get_image_path(self, asana) -> str:
+    def _get_image_path(self, asana) -> Optional[str]:
         """Получает путь к изображению асаны"""
-        # Если асана - это строка, возвращаем None
         if isinstance(asana, str):
             return None
-        
-        # Используем существующую логику из data_service
-        try:
-            category = getattr(asana, 'category', 'unknown')
-            name = getattr(asana, 'name', 'unknown')
-            return self.data_service._get_image_path(category, name)
-        except Exception as e:
-            logger.error(f"Error getting image path for asana {asana}: {e}")
-            return None
+        # DataService уже подбирает .jpg/.png при загрузке асаны
+        return getattr(asana, 'image_path', None) or getattr(asana, 'thumbnail_path', None)
     
     def _estimate_calories(self, params: SequenceParams, duration_seconds: int) -> int:
         """Оценивает расход калорий"""

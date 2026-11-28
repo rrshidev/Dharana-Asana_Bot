@@ -584,7 +584,7 @@ TRANSLATIONS = {
             "🌟 **Откройте облегченные варианты асан!**\n\n"
             "В премиум-версии вы получите:\n"
             "• 📹 Видео с подготовительными упражнениями\n"
-            "• 🔄 3 уровня сложности каждой асаны\n"
+            "• 🔄 5 уровней сложности каждой асаны\n"
             "• 🛡️ Безопасные прогрессии"
         ),
         'daily_prem_up_safe': (
@@ -1408,7 +1408,7 @@ TRANSLATIONS = {
             "🌟 **Unlock easier asana variations!**\n\n"
             "In the premium version you get:\n"
             "• 📹 Videos with preparatory exercises\n"
-            "• 🔄 3 difficulty levels for every asana\n"
+            "• 🔄 5 difficulty levels for every asana\n"
             "• 🛡️ Safe progressions"
         ),
         'daily_prem_up_safe': (
